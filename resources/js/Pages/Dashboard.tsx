@@ -1,254 +1,342 @@
+import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import { PageProps } from '@/types';
+import { Link } from '@inertiajs/react';
+import { 
+    Calendar, 
+    CheckSquare, 
+    Clock, 
+    Users, 
+    FolderOpen, 
+    TrendingUp, 
+    Bell,
+    Plus,
+    Filter,
+    Search,
+    BarChart3,
+    Activity,
+    Target,
+    AlertCircle
+} from 'lucide-react';
 
 export default function Dashboard({ auth }: PageProps) {
-    // Mock data - dalam implementasi nyata, data ini akan datang dari backend
-    const stats = {
-        totalProjects: 24,
-        activeProjects: 18,
-        completedProjects: 6,
-        totalTasks: 156,
-        pendingTasks: 89,
-        completedTasks: 67,
-        overallProgress: 72,
-        todayDeadlines: 5
-    };
+    // Remove useAuth hook - use only Inertia's auth prop
+    const [dashboardData, setDashboardData] = useState({
+        projects: { total: 12, active: 8, completed: 4 },
+        tasks: { total: 47, todo: 15, inProgress: 18, done: 14 },
+        team: { members: 24, online: 12 },
+        notifications: 5
+    });
 
-    const recentProjects = [
-        { id: 1, name: "Website Redesign", progress: 85, status: "In Progress", deadline: "2025-06-15" },
-        { id: 2, name: "Mobile App Development", progress: 45, status: "In Progress", deadline: "2025-07-20" },
-        { id: 3, name: "Marketing Campaign", progress: 100, status: "Completed", deadline: "2025-05-25" },
-        { id: 4, name: "Database Migration", progress: 30, status: "In Progress", deadline: "2025-06-30" }
-    ];
+    const [recentProjects] = useState([
+        { id: 1, name: 'E-Commerce Redesign', progress: 75, status: 'In Progress', deadline: '2025-06-15', team: 5 },
+        { id: 2, name: 'Mobile App Development', progress: 45, status: 'In Progress', deadline: '2025-07-01', team: 8 },
+        { id: 3, name: 'Website Optimization', progress: 90, status: 'Near Completion', deadline: '2025-06-05', team: 3 },
+        { id: 4, name: 'Database Migration', progress: 100, status: 'Completed', deadline: '2025-05-20', team: 4 }
+    ]);
 
-    const upcomingTasks = [
-        { id: 1, title: "Review UI mockups", project: "Website Redesign", deadline: "Today", priority: "High" },
-        { id: 2, title: "API Testing", project: "Mobile App", deadline: "Tomorrow", priority: "Medium" },
-        { id: 3, title: "Content Review", project: "Marketing Campaign", deadline: "Jun 2", priority: "Low" },
-        { id: 4, title: "Database backup", project: "Migration", deadline: "Jun 3", priority: "High" }
-    ];
+    const [recentTasks] = useState([
+        { id: 1, title: 'Design user interface mockups', project: 'E-Commerce Redesign', status: 'In Progress', priority: 'High', assignee: 'Sarah Johnson' },
+        { id: 2, title: 'Implement authentication system', project: 'Mobile App Development', status: 'To Do', priority: 'Medium', assignee: 'Mike Chen' },
+        { id: 3, title: 'Optimize database queries', project: 'Website Optimization', status: 'Done', priority: 'High', assignee: 'Alex Rodriguez' },
+        { id: 4, title: 'Write API documentation', project: 'Database Migration', status: 'In Progress', priority: 'Low', assignee: 'Emma Wilson' }
+    ]);
+
+    // Remove client-side auth check - Laravel middleware should handle this
+    const currentUser = auth?.user;
+
+    // If no user (shouldn't happen with proper middleware), show error
+    if (!currentUser) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+                <div className="text-center bg-white p-8 rounded-2xl shadow-xl">
+                    <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg mb-6">Authentication required</p>
+                    <Link 
+                        href="/login"
+                        className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                    >
+                        Go to Login
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    const isAdmin = currentUser.roles?.includes('admin');
+    const isProjectManager = currentUser.roles?.includes('project manager');
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'Completed': return 'text-green-600 bg-green-100';
-            case 'In Progress': return 'text-blue-600 bg-blue-100';
-            case 'On Hold': return 'text-yellow-600 bg-yellow-100';
-            default: return 'text-gray-600 bg-gray-100';
+            case 'To Do': return 'bg-gray-100 text-gray-800';
+            case 'In Progress': return 'bg-blue-100 text-blue-800';
+            case 'Done': return 'bg-green-100 text-green-800';
+            case 'Completed': return 'bg-green-100 text-green-800';
+            case 'Near Completion': return 'bg-yellow-100 text-yellow-800';
+            default: return 'bg-gray-100 text-gray-800';
         }
     };
 
     const getPriorityColor = (priority: string) => {
         switch (priority) {
-            case 'High': return 'text-red-600 bg-red-100';
-            case 'Medium': return 'text-yellow-600 bg-yellow-100';
-            case 'Low': return 'text-green-600 bg-green-100';
-            default: return 'text-gray-600 bg-gray-100';
+            case 'High': return 'border-l-red-500 bg-red-50';
+            case 'Medium': return 'border-l-yellow-500 bg-yellow-50';
+            case 'Low': return 'border-l-green-500 bg-green-50';
+            default: return 'border-l-gray-500 bg-gray-50';
         }
     };
 
     return (
         <AuthenticatedLayout
-            user={auth.user}
-            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Dashboard</h2>}
-            currentRoute="dashboard"
+            user={currentUser}
+            
         >
             <Head title="Dashboard" />
 
-            <div className="py-12">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div className="py-8 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     {/* Welcome Section */}
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-sm mb-8 p-6">
-                        <div className="text-white">
-                            <h1 className="text-2xl font-bold mb-2">
-                                Selamat datang kembali, {auth.user.name}!
-                            </h1>
-                            <p className="text-blue-100">
-                                Berikut adalah ringkasan proyek dan tugas Anda hari ini.
-                            </p>
+                    <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-100">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                                    Welcome back, {currentUser.name}! 👋
+                                </h1>
+                                <p className="text-gray-600 text-lg">
+                                    Here's what's happening with your projects today
+                                </p>
+                            </div>
+                            <div className="hidden md:block">
+                                <div className="flex items-center space-x-4">
+                                    <div className="text-right">
+                                        <p className="text-sm text-gray-500">Today</p>
+                                        <p className="text-xl font-semibold text-gray-900">
+                                            {new Date().toLocaleDateString('en-US', { 
+                                                weekday: 'long', 
+                                                month: 'short', 
+                                                day: 'numeric' 
+                                            })}
+                                        </p>
+                                    </div>
+                                    <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center">
+                                        <Calendar className="w-8 h-8 text-white" />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Statistics Cards */}
+                    {/* Stats Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        {/* Total Projects */}
-                        <div className="bg-white overflow-hidden shadow-sm rounded-lg">
-                            <div className="p-6">
-                                <div className="flex items-center">
-                                    <div className="flex-shrink-0">
-                                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                    <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-500">Total Proyek</p>
-                                        <p className="text-2xl font-semibold text-gray-900">{stats.totalProjects}</p>
-                                    </div>
+                        <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Total Projects</p>
+                                    <p className="text-3xl font-bold text-gray-900">{dashboardData.projects.total}</p>
+                                    <p className="text-sm text-green-600 mt-1">
+                                        <TrendingUp className="inline w-4 h-4 mr-1" />
+                                        {dashboardData.projects.active} active
+                                    </p>
                                 </div>
-                                <div className="mt-3">
-                                    <div className="flex text-sm">
-                                        <span className="text-green-600">{stats.activeProjects} aktif</span>
-                                        <span className="text-gray-500 mx-2">•</span>
-                                        <span className="text-blue-600">{stats.completedProjects} selesai</span>
-                                    </div>
+                                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center">
+                                    <FolderOpen className="w-8 h-8 text-white" />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Total Tasks */}
-                        <div className="bg-white overflow-hidden shadow-sm rounded-lg">
-                            <div className="p-6">
-                                <div className="flex items-center">
-                                    <div className="flex-shrink-0">
-                                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                    <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-500">Total Tugas</p>
-                                        <p className="text-2xl font-semibold text-gray-900">{stats.totalTasks}</p>
-                                    </div>
+                        <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Total Tasks</p>
+                                    <p className="text-3xl font-bold text-gray-900">{dashboardData.tasks.total}</p>
+                                    <p className="text-sm text-blue-600 mt-1">
+                                        <Activity className="inline w-4 h-4 mr-1" />
+                                        {dashboardData.tasks.inProgress} in progress
+                                    </p>
                                 </div>
-                                <div className="mt-3">
-                                    <div className="flex text-sm">
-                                        <span className="text-orange-600">{stats.pendingTasks} pending</span>
-                                        <span className="text-gray-500 mx-2">•</span>
-                                        <span className="text-green-600">{stats.completedTasks} selesai</span>
-                                    </div>
+                                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center">
+                                    <CheckSquare className="w-8 h-8 text-white" />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Overall Progress */}
-                        <div className="bg-white overflow-hidden shadow-sm rounded-lg">
-                            <div className="p-6">
-                                <div className="flex items-center">
-                                    <div className="flex-shrink-0">
-                                        <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                                            </svg>
+                        <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Team Members</p>
+                                    <p className="text-3xl font-bold text-gray-900">{dashboardData.team.members}</p>
+                                    <p className="text-sm text-purple-600 mt-1">
+                                        <div className="flex items-center">
+                                            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                                            {dashboardData.team.online} online
                                         </div>
-                                    </div>
-                                    <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-500">Progress Keseluruhan</p>
-                                        <p className="text-2xl font-semibold text-gray-900">{stats.overallProgress}%</p>
-                                    </div>
+                                    </p>
                                 </div>
-                                <div className="mt-3">
-                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                        <div 
-                                            className="bg-purple-500 h-2 rounded-full transition-all duration-300"
-                                            style={{ width: `${stats.overallProgress}%` }}
-                                        ></div>
-                                    </div>
+                                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center">
+                                    <Users className="w-8 h-8 text-white" />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Today's Deadlines */}
-                        <div className="bg-white overflow-hidden shadow-sm rounded-lg">
-                            <div className="p-6">
-                                <div className="flex items-center">
-                                    <div className="flex-shrink-0">
-                                        <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                    <div className="ml-4">
-                                        <p className="text-sm font-medium text-gray-500">Deadline Hari Ini</p>
-                                        <p className="text-2xl font-semibold text-gray-900">{stats.todayDeadlines}</p>
-                                    </div>
+                        <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Completion Rate</p>
+                                    <p className="text-3xl font-bold text-gray-900">
+                                        {Math.round((dashboardData.tasks.done / dashboardData.tasks.total) * 100)}%
+                                    </p>
+                                    <p className="text-sm text-orange-600 mt-1">
+                                        <Target className="inline w-4 h-4 mr-1" />
+                                        {dashboardData.tasks.done} completed
+                                    </p>
                                 </div>
-                                <div className="mt-3">
-                                    <span className="text-sm text-red-600">Perlu perhatian segera</span>
+                                <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center">
+                                    <BarChart3 className="w-8 h-8 text-white" />
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Recent Projects and Upcoming Tasks */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Main Content Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Recent Projects */}
-                        <div className="bg-white overflow-hidden shadow-sm rounded-lg">
-                            <div className="px-6 py-4 border-b border-gray-200">
-                                <h3 className="text-lg font-medium text-gray-900">Proyek Terbaru</h3>
-                            </div>
-                            <div className="p-6">
+                        <div className="lg:col-span-2">
+                            <div className="bg-white rounded-2xl shadow-lg p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-xl font-bold text-gray-900">Recent Projects</h3>
+                                    <Link href="/projects" className="text-indigo-600 hover:text-indigo-700 font-medium">
+                                        View All
+                                    </Link>
+                                </div>
                                 <div className="space-y-4">
                                     {recentProjects.map((project) => (
-                                        <div key={project.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h4 className="text-sm font-medium text-gray-900">{project.name}</h4>
-                                                <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(project.status)}`}>
+                                        <div key={project.id} className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h4 className="font-semibold text-gray-900">{project.name}</h4>
+                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
                                                     {project.status}
                                                 </span>
                                             </div>
-                                            <div className="mb-2">
-                                                <div className="flex justify-between text-sm text-gray-500 mb-1">
-                                                    <span>Progress</span>
-                                                    <span>{project.progress}%</span>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                                    <span className="flex items-center">
+                                                        <Users className="w-4 h-4 mr-1" />
+                                                        {project.team} members
+                                                    </span>
+                                                    <span className="flex items-center">
+                                                        <Clock className="w-4 h-4 mr-1" />
+                                                        Due {new Date(project.deadline).toLocaleDateString()}
+                                                    </span>
                                                 </div>
-                                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                                    <div 
-                                                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                                                        style={{ width: `${project.progress}%` }}
-                                                    ></div>
-                                                </div>
+                                                <span className="text-sm font-medium text-gray-900">{project.progress}%</span>
                                             </div>
-                                            <p className="text-xs text-gray-500">Deadline: {project.deadline}</p>
+                                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                                <div 
+                                                    className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full transition-all duration-500"
+                                                    style={{ width: `${project.progress}%` }}
+                                                ></div>
+                                            </div>
                                         </div>
                                     ))}
-                                </div>
-                                <div className="mt-4">
-                                    <a href="#" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                                        Lihat semua proyek →
-                                    </a>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Upcoming Tasks */}
-                        <div className="bg-white overflow-hidden shadow-sm rounded-lg">
-                            <div className="px-6 py-4 border-b border-gray-200">
-                                <h3 className="text-lg font-medium text-gray-900">Tugas Mendatang</h3>
-                            </div>
-                            <div className="p-6">
+                        {/* Task Overview */}
+                        <div>
+                            <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                                <h3 className="text-xl font-bold text-gray-900 mb-6">Task Overview</h3>
                                 <div className="space-y-4">
-                                    {upcomingTasks.map((task) => (
-                                        <div key={task.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1">
-                                                    <h4 className="text-sm font-medium text-gray-900 mb-1">{task.title}</h4>
-                                                    <p className="text-xs text-gray-500 mb-2">{task.project}</p>
-                                                    <div className="flex items-center space-x-2">
-                                                        <span className="text-xs text-gray-500">{task.deadline}</span>
-                                                        <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(task.priority)}`}>
-                                                            {task.priority}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <input type="checkbox" className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-                                            </div>
+                                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center">
+                                            <div className="w-3 h-3 bg-gray-400 rounded-full mr-3"></div>
+                                            <span className="text-gray-700">To Do</span>
                                         </div>
-                                    ))}
+                                        <span className="font-semibold text-gray-900">{dashboardData.tasks.todo}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                                        <div className="flex items-center">
+                                            <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
+                                            <span className="text-gray-700">In Progress</span>
+                                        </div>
+                                        <span className="font-semibold text-gray-900">{dashboardData.tasks.inProgress}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                        <div className="flex items-center">
+                                            <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                                            <span className="text-gray-700">Done</span>
+                                        </div>
+                                        <span className="font-semibold text-gray-900">{dashboardData.tasks.done}</span>
+                                    </div>
                                 </div>
-                                <div className="mt-4">
-                                    <a href="#" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                                        Lihat semua tugas →
-                                    </a>
+                            </div>
+
+                            {/* Quick Actions */}
+                            <div className="bg-white rounded-2xl shadow-lg p-6">
+                                <h3 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h3>
+                                <div className="space-y-3">
+                                    {(isAdmin || isProjectManager) && (
+                                        <button className="w-full flex items-center justify-center space-x-2 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors">
+                                            <Plus className="w-4 h-4" />
+                                            <span>Create Project</span>
+                                        </button>
+                                    )}
+                                    <button className="w-full flex items-center justify-center space-x-2 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors">
+                                        <CheckSquare className="w-4 h-4" />
+                                        <span>Add Task</span>
+                                    </button>
+                                    <button className="w-full flex items-center justify-center space-x-2 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition-colors">
+                                        <Users className="w-4 h-4" />
+                                        <span>Invite Team</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                   
+                    {/* Recent Tasks */}
+                    <div className="mt-8">
+                        <div className="bg-white rounded-2xl shadow-lg p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold text-gray-900">Recent Tasks</h3>
+                                <div className="flex items-center space-x-3">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search tasks..."
+                                            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        />
+                                    </div>
+                                    <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                        <Filter className="w-4 h-4" />
+                                        <span>Filter</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                {recentTasks.map((task) => (
+                                    <div key={task.id} className={`border-l-4 p-4 rounded-lg ${getPriorityColor(task.priority)}`}>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h4 className="font-semibold text-gray-900">{task.title}</h4>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+                                                {task.status}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm text-gray-600">
+                                            <div className="flex items-center space-x-4">
+                                                <span>{task.project}</span>
+                                                <span>•</span>
+                                                <span>{task.assignee}</span>
+                                            </div>
+                                            <span className="text-xs font-medium text-gray-500">{task.priority} Priority</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </AuthenticatedLayout>

@@ -19,87 +19,104 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Create permissions
         $permissions = [
-            'manage-users',
-            'create-project',
-            'update-project',
-            'delete-project',
-            'assign-tasks',
-            'update-tasks',
-            'comment-tasks',
-            'view-dashboard',
-            'view-projects',
-            'view-tasks',
-            'create-tasks',
-            'delete-tasks',
-            'manage-project-members',
-            'view-reports',
+            'manage users',
+            'create project',
+            'update project', 
+            'delete project',
+            'assign tasks',
+            'update tasks',
+            'comment tasks',
+            'view dashboard',
+            'view projects',
+            'view tasks',
+            'delete tasks', 
+            'manage roles', 
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
-        // Create roles and assign permissions
-        $adminRole = Role::create(['name' => 'admin']);
-        $adminRole->givePermissionTo(Permission::all());
-
-        $projectManagerRole = Role::create(['name' => 'project-manager']);
-        $projectManagerRole->givePermissionTo([
-            'create-project',
-            'update-project',
-            'assign-tasks',
-            'update-tasks',
-            'comment-tasks',
-            'view-dashboard',
-            'view-projects',
-            'view-tasks',
-            'create-tasks',
-            'delete-tasks',
-            'manage-project-members',
-            'view-reports',
+        // Create roles dan assign permissions
+        
+        // Admin Role
+        $adminRole = Role::firstOrCreate(['name' => 'Admin']);
+        $adminRole->syncPermissions([
+            'manage users',
+            'create project',
+            'update project',
+            'delete project',
+            'comment tasks',
+            'view dashboard',
+            'view projects',
+            'view tasks',
+            'manage roles',
         ]);
 
-        $teamMemberRole = Role::create(['name' => 'team-member']);
-        $teamMemberRole->givePermissionTo([
-            'update-tasks',
-            'comment-tasks',
-            'view-dashboard',
-            'view-projects',
-            'view-tasks',
+        // Project Manager Role
+        $projectManagerRole = Role::firstOrCreate(['name' => 'Project Manager']);
+        $projectManagerRole->syncPermissions([
+            'create project',
+            'update project',
+            'assign tasks',
+            'update tasks',
+            'comment tasks',
+            'view dashboard',
+            'view projects',
+            'view tasks',
+            'delete tasks',
         ]);
 
-        // Create default users
-        $admin = User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@pms.com',
-            'password' => bcrypt('password'),
-            'email_verified_at' => now(),
+        // Team Member Role
+        $teamMemberRole = Role::firstOrCreate(['name' => 'Team Member']);
+        $teamMemberRole->syncPermissions([
+            'update tasks',
+            'comment tasks',
+            'view dashboard',
+            'view projects',
+            'view tasks',
         ]);
-        $admin->assignRole('admin');
 
-        $manager = User::create([
-            'name' => 'Project Manager',
-            'email' => 'manager@pms.com',
-            'password' => bcrypt('password'),
-            'email_verified_at' => now(),
-        ]);
-        $manager->assignRole('project-manager');
+        // Buat default users jika belum ada
+        if (!User::where('email', 'admin@pms.com')->exists()) {
+            $admin = User::create([
+                'name' => 'Admin User',
+                'email' => 'admin@pms.com',
+                'password' => bcrypt('password'),
+                'email_verified_at' => now(),
+            ]);
+            $admin->assignRole('Admin');
+        }
 
-        $member1 = User::create([
-            'name' => 'Team Member 1',
-            'email' => 'member1@pms.com',
-            'password' => bcrypt('password'),
-            'email_verified_at' => now(),
-        ]);
-        $member1->assignRole('team-member');
+        if (!User::where('email', 'manager@pms.com')->exists()) {
+            $manager = User::create([
+                'name' => 'Project Manager',
+                'email' => 'manager@pms.com', 
+                'password' => bcrypt('password'),
+                'email_verified_at' => now(),
+            ]);
+            $manager->assignRole('Project Manager');
+        }
 
-        $member2 = User::create([
-            'name' => 'Team Member 2',
-            'email' => 'member2@pms.com',
-            'password' => bcrypt('password'),
-            'email_verified_at' => now(),
-        ]);
-        $member2->assignRole('team-member');
+        if (!User::where('email', 'member1@pms.com')->exists()) {
+            $member1 = User::create([
+                'name' => 'Team Member 1',
+                'email' => 'member1@pms.com',
+                'password' => bcrypt('password'),
+                'email_verified_at' => now(),
+            ]);
+            $member1->assignRole('Team Member');
+        }
+
+        if (!User::where('email', 'member2@pms.com')->exists()) {
+            $member2 = User::create([
+                'name' => 'Team Member 2', 
+                'email' => 'member2@pms.com',
+                'password' => bcrypt('password'),
+                'email_verified_at' => now(),
+            ]);
+            $member2->assignRole('Team Member');
+        }
     
     }
 }

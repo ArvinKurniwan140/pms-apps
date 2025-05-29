@@ -31,3 +31,15 @@ export interface RegisterCredentials {
   password: string;
   password_confirmation: string;
 }
+
+export interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  register: (credentials: RegisterCredentials) => Promise<void>;
+  logout: () => void;
+  isAuthenticated: boolean;
+  hasRole: (role: string) => boolean;
+  hasPermission: (permission: string) => boolean;
+  loading: boolean;
+}

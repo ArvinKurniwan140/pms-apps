@@ -33,15 +33,15 @@ class ProjectController extends Controller
                 $projects = $query->get();
             } elseif ($user->hasRole('Project Manager')) {
                 // Project Manager bisa melihat proyek yang dia buat atau dia adalah member
-                $projects = $query->where(function($q) use ($user) {
+                $projects = $query->where(function ($q) use ($user) {
                     $q->where('created_by', $user->id)
-                      ->orWhereHas('members', function($memberQuery) use ($user) {
-                          $memberQuery->where('user_id', $user->id);
-                      });
+                        ->orWhereHas('members', function ($memberQuery) use ($user) {
+                            $memberQuery->where('user_id', $user->id);
+                        });
                 })->get();
             } else {
                 // Team Member hanya bisa melihat proyek dimana dia adalah member
-                $projects = $query->whereHas('members', function($memberQuery) use ($user) {
+                $projects = $query->whereHas('members', function ($memberQuery) use ($user) {
                     $memberQuery->where('user_id', $user->id);
                 })->get();
             }
@@ -61,7 +61,7 @@ class ProjectController extends Controller
                     'members_count' => $project->members->count(),
                     'tasks_count' => $project->tasks->count(),
                     'completed_tasks' => $project->tasks->where('status', 'done')->count(),
-                    'progress' => $project->tasks->count() > 0 ? 
+                    'progress' => $project->tasks->count() > 0 ?
                         round(($project->tasks->where('status', 'done')->count() / $project->tasks->count()) * 100, 2) : 0
                 ];
             });
@@ -70,7 +70,6 @@ class ProjectController extends Controller
                 'status' => 'success',
                 'data' => $projectsData
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -142,7 +141,6 @@ class ProjectController extends Controller
                 'message' => 'Project created successfully',
                 'data' => $project
             ], 201);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -161,15 +159,15 @@ class ProjectController extends Controller
         try {
             $user = Auth::user();
             $project = Project::with(['creator', 'members', 'tasks.assignee', 'tasks.creator'])
-                             ->findOrFail($id);
+                ->findOrFail($id);
 
             // Check if user has access to this project
             $hasAccess = false;
             if ($user->hasRole('Admin')) {
                 $hasAccess = true;
             } elseif ($user->hasRole('Project Manager')) {
-                $hasAccess = $project->created_by === $user->id || 
-                            $project->members()->where('user_id', $user->id)->exists();
+                $hasAccess = $project->created_by === $user->id ||
+                    $project->members()->where('user_id', $user->id)->exists();
             } else {
                 $hasAccess = $project->members()->where('user_id', $user->id)->exists();
             }
@@ -191,7 +189,7 @@ class ProjectController extends Controller
                 'created_by' => $project->creator->name,
                 'created_at' => $project->created_at,
                 'updated_at' => $project->updated_at,
-                'members' => $project->members->map(function($member) {
+                'members' => $project->members->map(function ($member) {
                     return [
                         'id' => $member->id,
                         'name' => $member->name,
@@ -199,7 +197,7 @@ class ProjectController extends Controller
                         'roles' => $member->getRoleNames()
                     ];
                 }),
-                'tasks' => $project->tasks->map(function($task) {
+                'tasks' => $project->tasks->map(function ($task) {
                     return [
                         'id' => $task->id,
                         'title' => $task->title,
@@ -217,7 +215,7 @@ class ProjectController extends Controller
                     'completed_tasks' => $project->tasks->where('status', 'done')->count(),
                     'in_progress_tasks' => $project->tasks->where('status', 'in_progress')->count(),
                     'todo_tasks' => $project->tasks->where('status', 'to_do')->count(),
-                    'progress_percentage' => $project->tasks->count() > 0 ? 
+                    'progress_percentage' => $project->tasks->count() > 0 ?
                         round(($project->tasks->where('status', 'done')->count() / $project->tasks->count()) * 100, 2) : 0
                 ]
             ];
@@ -226,7 +224,6 @@ class ProjectController extends Controller
                 'status' => 'success',
                 'data' => $projectData
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -249,8 +246,10 @@ class ProjectController extends Controller
             $canUpdate = false;
             if ($user->hasRole('Admin')) {
                 $canUpdate = true;
-            } elseif ($user->hasRole('Project Manager') && 
-                     ($project->created_by === $user->id || $user->can('update project'))) {
+            } elseif (
+                $user->hasRole('Project Manager') &&
+                ($project->created_by === $user->id || $user->can('update project'))
+            ) {
                 $canUpdate = true;
             }
 
@@ -282,18 +281,22 @@ class ProjectController extends Controller
             DB::beginTransaction();
 
             $project->update($request->only([
-                'name', 'description', 'status', 'start_date', 'end_date'
+                'name',
+                'description',
+                'status',
+                'start_date',
+                'end_date'
             ]));
 
             // Update members if provided
             if ($request->has('member_ids')) {
                 $memberIds = $request->member_ids ?? [];
-                
+
                 // Ensure creator is always a member
                 if (!in_array($project->created_by, $memberIds)) {
                     $memberIds[] = $project->created_by;
                 }
-                
+
                 $project->members()->sync($memberIds);
             }
 
@@ -306,7 +309,6 @@ class ProjectController extends Controller
                 'message' => 'Project updated successfully',
                 'data' => $project
             ], 200);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -346,7 +348,6 @@ class ProjectController extends Controller
                 'status' => 'success',
                 'message' => 'Project deleted successfully'
             ], 200);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -364,22 +365,21 @@ class ProjectController extends Controller
     {
         try {
             $users = User::select('id', 'name', 'email')
-                         ->with('roles')
-                         ->get()
-                         ->map(function($user) {
-                             return [
-                                 'id' => $user->id,
-                                 'name' => $user->name,
-                                 'email' => $user->email,
-                                 'roles' => $user->getRoleNames()
-                             ];
-                         });
+                ->with('roles')
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'roles' => $user->getRoleNames()
+                    ];
+                });
 
             return response()->json([
                 'status' => 'success',
                 'data' => $users
             ], 200);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',

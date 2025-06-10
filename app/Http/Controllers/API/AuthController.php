@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
@@ -24,8 +25,6 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request): JsonResponse
     {
-        DB::beginTransaction();
-
         try {
             $user = User::create([
                 'name' => $request->name,
@@ -36,30 +35,11 @@ class AuthController extends Controller
             // Assign default role
             $user->assignRole('Team Member');
 
-            // Generate token
             $token = JWTAuth::fromUser($user);
 
-            DB::commit(); // PASTIKAN INI DIPANGGIL SEBELUM RESPONSE
-
-            return response()->json([
-                'success' => true,
-                'message' => 'User registered successfully',
-                'data' => [
-                    'user' => new UserResource($user->load('roles')),
-                    'token' => $token,
-                    'token_type' => 'bearer',
-                    'expires_in' => config('jwt.ttl') * 60,
-                ]
-            ], 201);
+            return $this->createNewToken($token, $user, 'User registered successfully');
         } catch (\Exception $e) {
-            DB::rollBack();
-
-            // Tambahkan logging detail
-            \Log::error('Registration Error', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'input' => $request->all()
-            ]);
+            Log::error('Registration failed: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
@@ -190,6 +170,22 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Password changed successfully'
+        ]);
+    }
+
+    // app/Http/Controllers/AuthController.php
+
+    protected function respondWithToken($token)
+    {
+        $user = auth()->user();
+        $permissions = $user->getAllPermissions()->pluck('name');
+
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => config('jwt.ttl') * 60,
+            'user' => $user,
+            'permissions' => $permissions
         ]);
     }
 }

@@ -21,7 +21,7 @@ class CheckRole
 
         if (!auth()->user()->hasAnyRole($roles)) {
             return response()->json([
-            'message' => 'You do not have the required role to access this resource'
+                'message' => 'You do not have the required role to access this resource'
             ], 403);
         }
 

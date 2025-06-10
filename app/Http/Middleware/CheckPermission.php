@@ -15,14 +15,8 @@ class CheckPermission
      */
     public function handle(Request $request, Closure $next, $permission): Response
     {
-        if (!auth()->check()) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
-
-        if (!\Illuminate\Support\Facades\Gate::allows($permission)) {
-            return response()->json([
-                'message' => 'You do not have permission to perform this action'
-            ], 403);
+        if (!$request->user() || !$request->user()->hasPermissionTo($permission)) {
+            abort(403, 'Unauthorized action.');
         }
 
         return $next($request);

@@ -9,6 +9,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -23,6 +24,8 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request): JsonResponse
     {
+        DB::beginTransaction();
+
         try {
             $user = User::create([
                 'name' => $request->name,
@@ -31,10 +34,12 @@ class AuthController extends Controller
             ]);
 
             // Assign default role
-            $user->assignRole('team-member');
+            $user->assignRole('Team Member');
 
             // Generate token
             $token = JWTAuth::fromUser($user);
+
+            DB::commit(); // PASTIKAN INI DIPANGGIL SEBELUM RESPONSE
 
             return response()->json([
                 'success' => true,
@@ -46,8 +51,16 @@ class AuthController extends Controller
                     'expires_in' => config('jwt.ttl') * 60,
                 ]
             ], 201);
-
         } catch (\Exception $e) {
+            DB::rollBack();
+
+            // Tambahkan logging detail
+            \Log::error('Registration Error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'input' => $request->all()
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Registration failed',
@@ -69,7 +82,7 @@ class AuthController extends Controller
             }
 
             $user = User::find(auth()->id());
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Login successful',
@@ -80,7 +93,6 @@ class AuthController extends Controller
                     'expires_in' => config('jwt.ttl') * 60,
                 ]
             ]);
-
         } catch (JWTException $e) {
             return response()->json([
                 'success' => false,
@@ -94,12 +106,11 @@ class AuthController extends Controller
     {
         try {
             $user = auth()->user();
-            
+
             return response()->json([
                 'success' => true,
                 'data' => ($user instanceof \App\Models\User) ? new UserResource($user->load('roles')) : null
             ]);
-
         } catch (JWTException $e) {
             return response()->json([
                 'success' => false,
@@ -113,12 +124,11 @@ class AuthController extends Controller
     {
         try {
             JWTAuth::invalidate(JWTAuth::getToken());
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Successfully logged out'
             ]);
-
         } catch (JWTException $e) {
             return response()->json([
                 'success' => false,
@@ -132,7 +142,7 @@ class AuthController extends Controller
     {
         try {
             $token = JWTAuth::refresh(JWTAuth::getToken());
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Token refreshed successfully',
@@ -142,7 +152,6 @@ class AuthController extends Controller
                     'expires_in' => config('jwt.ttl') * 60,
                 ]
             ]);
-
         } catch (JWTException $e) {
             return response()->json([
                 'success' => false,

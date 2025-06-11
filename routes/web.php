@@ -62,14 +62,9 @@ Route::middleware('auth')->group(function () {
             ->name('destroy')
             ->middleware('permission:delete project');
 
-        // Project Members
-        Route::get('/{project}/members', [ProjectController::class, 'members'])->name('members');
         Route::post('/{project}/members', [ProjectController::class, 'addMember'])
-            ->name('members.add')
-            ->middleware('permission:assign tasks');
-        Route::delete('/{project}/members/{user}', [ProjectController::class, 'removeMember'])
-            ->name('members.remove')
-            ->middleware('permission:assign tasks');
+            ->middleware(['auth', 'role:Admin|Project Manager']);
+
 
         // Project Tasks
         Route::get('/{project}/tasks', [ProjectController::class, 'tasks'])->name('tasks');

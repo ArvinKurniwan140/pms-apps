@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
+use App\Models\User;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Models\Permission;
@@ -36,8 +38,6 @@ class ProjectController extends Controller
                     'end_date' => $project->end_date?->format('Y-m-d'),
                     'status' => $project->status,
                     'progress' => $project->progress,
-                    'is_overdue' => $project->is_overdue,
-                    'days_remaining' => $project->days_remaining,
                     'created_by' => $project->creator->name,
                     'member_count' => $project->members->count(),
                     'task_count' => $project->tasks->count(),
@@ -90,10 +90,14 @@ class ProjectController extends Controller
     public function show(Project $project)
     {
         $this->authorize('view', $project);
+        $availableUsers = User::whereDoesntHave('projects', function ($q) use ($project) {
+            $q->where('project_members.project_id', $project->id); // Spesifik tabel pivot
+        })->get(['id', 'name', 'email']);
 
         $project->load(['creator', 'members', 'tasks' => function ($query) {
             $query->with(['assignee', 'creator']);
         }]);
+
 
         return Inertia::render('Project/ProjectShow', [
             'project' => [
@@ -104,34 +108,40 @@ class ProjectController extends Controller
                 'end_date' => $project->end_date?->format('Y-m-d'),
                 'status' => $project->status,
                 'progress' => $project->progress,
-                'is_overdue' => $project->is_overdue,
-                'days_remaining' => $project->days_remaining,
                 'created_by' => $project->creator->name,
-                'members' => $project->members->map(function ($member) {
-                    return [
-                        'id' => $member->id,
-                        'name' => $member->name,
-                        'email' => $member->email,
-                        'role' => $member->pivot->role,
-                    ];
-                }),
-                'tasks' => $project->tasks->map(function ($task) {
-                    return [
-                        'id' => $task->id,
-                        'title' => $task->title,
-                        'description' => $task->description,
-                        'status' => $task->status,
-                        'priority' => $task->priority,
-                        'due_date' => $task->due_date?->format('Y-m-d'),
-                        'assignee' => $task->assignee?->name,
-                        'creator' => $task->creator->name,
-                    ];
-                }),
             ],
+            'members' => $project->members->map(function ($member) {
+                return [
+                    'id' => $member->id,
+                    'name' => $member->name,
+                    'email' => $member->email,
+                    'role' => $member->pivot->role,
+                ];
+            }),
+            'availableUsers' => $availableUsers->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email
+                ];
+            }),
+            'tasks' => $project->tasks->map(function ($task) {
+                return [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'description' => $task->description,
+                    'status' => $task->status,
+                    'priority' => $task->priority,
+                    'due_date' => $task->due_date?->format('Y-m-d'),
+                    'assignee' => $task->assignee?->name,
+                    'creator' => $task->creator->name,
+                ];
+            }),
             'can' => [
-                'edit' => Auth::user()->can('update project'),
+                'edit' => auth()->user()->can('update', $project),
                 'delete' => Auth::user()->can('delete project'),
                 'add_task' => Auth::user()->can('assign tasks'),
+                'add_member' => auth()->user()->hasAnyRole(['Admin', 'Project Manager']),
             ]
         ]);
     }
@@ -184,5 +194,28 @@ class ProjectController extends Controller
         $project->delete();
 
         return redirect()->route('projects.index')->with('success', 'Project deleted successfully.');
+    }
+
+    public function addMember(Request $request, Project $project)
+    {
+        if (!auth()->user()->hasAnyRole(['Admin', 'Project Manager'])) {
+            abort(403, 'Unauthorized');
+        }
+
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'role' => 'required|in:manager,member',
+        ]);
+
+        if ($project->members()->where('user_id', $request->user_id)->exists()) {
+            return back()->with('error', 'User already in project!');
+        }
+
+        $project->members()->attach($request->user_id, [
+            'role' => $request->role,
+            'joined_at' => now()
+        ]);
+
+        return back()->with('success', 'Member added successfully!');
     }
 }

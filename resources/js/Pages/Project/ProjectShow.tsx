@@ -2,17 +2,54 @@ import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Project } from '@/types';
+import AddMemberForm from '@/Components/AddMemberForm';
 
 interface Props {
-    project: Project;
+    project: Project & {
+        id: number;
+        name: string;
+        description: string;
+        start_date: string;
+        end_date: string | null;
+        status: string;
+        progress: number;
+        created_by: number | { id: number, name: string };
+        is_overdue?: boolean;
+        days_remaining?: number | null;
+    };
+    members: Array<{
+        id: number;
+        user_id: number;
+        name: string;
+        email: string;
+        role: string;
+        joined_at?: string;
+    }>;
+    availableUsers: Array<{
+        id: number;
+        name: string;
+        email: string;
+    }>;
+    tasks?: Array<{ // Tambahkan jika ada tasks di response
+        id: number;
+        title: string;
+        status: string;
+        description: string;
+        priority: boolean;
+        due_date: string;
+        assignee: string;
+        creator: string;
+    }>;
     can: {
         edit: boolean;
         delete: boolean;
         add_task: boolean;
+        add_member: boolean;
     };
 }
 
-const ProjectShow = ({ project, can }: Props) => {
+const ProjectShow = ({ project, can, availableUsers = [], members = [] }: Props) => {
+    console.log('Available Users Data:', availableUsers);
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'in_progress': return 'bg-blue-100 text-blue-800';
@@ -32,6 +69,7 @@ const ProjectShow = ({ project, can }: Props) => {
     };
 
     return (
+
         <AuthenticatedLayout
             header={
                 <h2 className="font-semibold text-xl text-gray-800 leading-tight">
@@ -118,15 +156,20 @@ const ProjectShow = ({ project, can }: Props) => {
 
                                 <div className="bg-gray-50 p-4 rounded-lg">
                                     <h3 className="text-sm font-medium text-gray-700 mb-2">Team Members</h3>
-                                    <p className="text-2xl font-semibold text-gray-900">{project.members?.length || 0}</p>
+                                    {can.add_member && (
+                                        <AddMemberForm
+                                            projectId={project.id}
+                                            availableUsers={availableUsers}
+                                        />
+                                    )}
                                 </div>
                             </div>
 
                             <div className="mb-8">
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Team Members</h3>
-                                {project.members && project.members.length > 0 ? (
+                                {members && members.length > 0 ? (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                        {project.members.map((member) => (
+                                        {members.map((member) => (
                                             <div key={member.id} className="bg-gray-50 p-4 rounded-lg">
                                                 <div className="flex items-center space-x-3">
                                                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">

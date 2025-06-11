@@ -33,4 +33,12 @@ class Task extends Model
     {
         return $this->hasMany(Comment::class);
     }
+    public function tasks()
+    {
+        return $this->hasMany(Task::class);
+    }
+    public function attachments()
+    {
+    return $this->morphMany(Attachment::class, 'attachable');
+    }
 }

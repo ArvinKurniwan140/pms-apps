@@ -21,60 +21,46 @@ class RolesAndPermissionsSeeder extends Seeder
         $permissions = [
             'manage users',
             'create project',
-            'update project', 
+            'update project',
             'delete project',
             'assign tasks',
             'update tasks',
             'comment tasks',
-            'view dashboard',
-            'view projects',
-            'view tasks',
-            'delete tasks', 
-            'manage roles', 
+            'view dashboard'
         ];
 
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
+            Permission::create(['name' => $permission]);
         }
 
-        // Create roles dan assign permissions
-        
-        // Admin Role
-        $adminRole = Role::firstOrCreate(['name' => 'Admin']);
-        $adminRole->syncPermissions([
+        // Create roles and assign permissions
+        $admin = Role::create(['name' => 'Admin']);
+        $admin->givePermissionTo([
             'manage users',
             'create project',
             'update project',
             'delete project',
+            'assign tasks',
+            'update tasks',
             'comment tasks',
-            'view dashboard',
-            'view projects',
-            'view tasks',
-            'manage roles',
+            'view dashboard'
         ]);
 
-        // Project Manager Role
-        $projectManagerRole = Role::firstOrCreate(['name' => 'Project Manager']);
-        $projectManagerRole->syncPermissions([
+        $projectManager = Role::create(['name' => 'Project Manager']);
+        $projectManager->givePermissionTo([
             'create project',
             'update project',
             'assign tasks',
             'update tasks',
             'comment tasks',
-            'view dashboard',
-            'view projects',
-            'view tasks',
-            'delete tasks',
+            'view dashboard'
         ]);
 
-        // Team Member Role
-        $teamMemberRole = Role::firstOrCreate(['name' => 'Team Member']);
-        $teamMemberRole->syncPermissions([
+        $teamMember = Role::create(['name' => 'Team Member']);
+        $teamMember->givePermissionTo([
             'update tasks',
             'comment tasks',
-            'view dashboard',
-            'view projects',
-            'view tasks',
+            'view dashboard'
         ]);
 
         // Buat default users jika belum ada
@@ -91,7 +77,7 @@ class RolesAndPermissionsSeeder extends Seeder
         if (!User::where('email', 'manager@pms.com')->exists()) {
             $manager = User::create([
                 'name' => 'Project Manager',
-                'email' => 'manager@pms.com', 
+                'email' => 'manager@pms.com',
                 'password' => bcrypt('password'),
                 'email_verified_at' => now(),
             ]);
@@ -110,13 +96,12 @@ class RolesAndPermissionsSeeder extends Seeder
 
         if (!User::where('email', 'member2@pms.com')->exists()) {
             $member2 = User::create([
-                'name' => 'Team Member 2', 
+                'name' => 'Team Member 2',
                 'email' => 'member2@pms.com',
                 'password' => bcrypt('password'),
                 'email_verified_at' => now(),
             ]);
             $member2->assignRole('Team Member');
         }
-    
     }
 }

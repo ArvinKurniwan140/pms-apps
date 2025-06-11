@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\TaskCommentController;
+use App\Http\Controllers\AttachmentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,7 +37,6 @@ Route::get('/unauthorized', function () {
     return inertia('Unauthorized');
 })->name('unauthorized');
 Route::resource('projects', ProjectController::class);
-// Route::resource('users', UserController::class);
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -78,55 +79,61 @@ Route::middleware('auth')->group(function () {
             ->name('settings.update')
             ->middleware('permission:update project');
     });
+    
     Route::prefix('tasks')->name('tasks.')->middleware('auth')->group(function () {
         // Task List (optional: all tasks visible to user)
-        Route::get('/', [TaskController::class, 'index'])
-            ->name('index');
+        Route::get('/', [TaskController::class, 'index'])->name('index');
 
         // Create Task
         Route::get('/create', [TaskController::class, 'create'])
             ->name('create')
-            ->middleware('permission:create task');
-
+            ->middleware('permission:assign tasks');
         Route::post('/', [TaskController::class, 'store'])
             ->name('store')
-            ->middleware('permission:create task');
+            ->middleware('permission:assign tasks');
 
         // Task Detail
-        Route::get('/{task}', [TaskController::class, 'show'])
-            ->name('show');
+        Route::get('/{task}', [TaskController::class, 'show'])->name('show');
 
         // Edit Task
         Route::get('/{task}/edit', [TaskController::class, 'edit'])
             ->name('edit')
-            ->middleware('permission:update task');
-
+            ->middleware('permission:update tasks');
         Route::put('/{task}', [TaskController::class, 'update'])
             ->name('update')
-            ->middleware('permission:update task');
+            ->middleware('permission:update tasks');
+        Route::patch('/{task}', [TaskController::class, 'update'])
+            ->name('patch')
+            ->middleware('permission:update tasks');
 
         // Delete Task
-        Route::delete('/{task}', [TaskController::class, 'destroy'])
-            ->name('destroy')
-            ->middleware('permission:delete task');
+        Route::delete('/{task}', [TaskController::class, 'destroy'])->name('destroy');
 
         // Assign & Unassign Members
         Route::post('/{task}/assign', [TaskController::class, 'assignUser'])
             ->name('assign')
             ->middleware('permission:assign tasks');
-
         Route::delete('/{task}/unassign/{user}', [TaskController::class, 'unassignUser'])
             ->name('unassign')
             ->middleware('permission:assign tasks');
 
         // Kanban View
-        Route::get('/kanban', [TaskController::class, 'kanban'])
-            ->name('kanban');
+        Route::get('/kanban', [TaskController::class, 'kanban'])->name('kanban');
 
-        // Status update (e.g. from kanban drag-drop)
-        Route::put('/{task}/status', [TaskController::class, 'updateStatus'])
-            ->name('status.update')
-            ->middleware('permission:update task');
+        // Task Comments - CRUD Routes
+        Route::post('/{task}/comments', [TaskCommentController::class, 'store'])
+            ->name('comments.store')
+            ->middleware('permission:comment tasks');
+        Route::patch('/{task}/comments/{comment}', [TaskCommentController::class, 'update'])
+            ->name('comments.update')
+            ->middleware('permission:comment tasks');
+        Route::delete('/{task}/comments/{comment}', [TaskCommentController::class, 'destroy'])
+            ->name('comments.destroy')
+            ->middleware('permission:comment tasks');
+        
+        Route::post('/attachments', [AttachmentController::class, 'store']);
+        Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download'])->name('attachments.download');
+        Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy']);
     });
 });
 

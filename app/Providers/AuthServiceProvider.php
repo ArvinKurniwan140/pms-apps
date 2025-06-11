@@ -6,6 +6,9 @@ use App\Models\Project;
 use App\Policies\ProjectPolicy;
 
 // use Illuminate\Support\Facades\Gate;
+
+use App\Models\Attachment;
+use App\Policies\AttachmentPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider

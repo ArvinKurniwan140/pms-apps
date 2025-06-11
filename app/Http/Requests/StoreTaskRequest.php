@@ -11,7 +11,7 @@ class StoreTaskRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -20,9 +20,12 @@ class StoreTaskRequest extends FormRequest
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
-    {
-        return [
-            //
-        ];
-    }
+{
+    return [
+        'title' => 'required|string|max:255',
+        'project_id' => 'required|exists:projects,id',
+        // field lain ...
+    ];
+}
+
 }

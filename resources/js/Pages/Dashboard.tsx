@@ -105,22 +105,12 @@ export default function Dashboard({
 
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
-            case 'planning':
             case 'todo':
                 return 'bg-gray-100 text-gray-800';
-            case 'active':
             case 'in_progress':
-            case 'in progress':
                 return 'bg-blue-100 text-blue-800';
             case 'done':
-            case 'completed':
                 return 'bg-green-100 text-green-800';
-            case 'overdue':
-                return 'bg-red-100 text-red-800';
-            case 'cancelled':
-                return 'bg-yellow-100 text-yellow-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
         }
     };
 
@@ -188,11 +178,6 @@ export default function Dashboard({
                                 <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
                                     <Calendar className="w-6 h-6 text-indigo-600" />
                                 </div>
-                                {stats.notifications > 0 && (
-                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                                        {stats.notifications}
-                                    </span>
-                                )}
                             </div>
                         </div>
                     </div>
@@ -256,12 +241,6 @@ export default function Dashboard({
                             <div>
                                 <p className="text-sm font-medium text-gray-500 mb-1">Team Members</p>
                                 <p className="text-2xl font-bold text-gray-900">{stats.team.members}</p>
-                                <div className="flex items-center mt-2">
-                                    <div className="flex items-center text-sm text-purple-600">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                                        {stats.team.online} online
-                                    </div>
-                                </div>
                             </div>
                             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                                 <Users className="w-6 h-6 text-purple-600" />

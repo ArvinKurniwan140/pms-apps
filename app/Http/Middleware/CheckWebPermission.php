@@ -27,3 +27,4 @@ class CheckWebPermission
         return $next($request);
     }
 }
+

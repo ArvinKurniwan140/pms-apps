@@ -21,14 +21,14 @@ class DashboardController extends Controller
         $projectsQuery = $user->hasRole('admin')
             ? Project::query()
             : Project::where('created_by', $user->id)
-            ->orWhereHas('members', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            });
+                ->orWhereHas('members', function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                });
 
         // Get all projects with progress calculation
         $allProjects = $projectsQuery->withProgress()->with(['creator', 'members', 'tasks'])->get();
 
-        // Calculate project stats - using correct status values
+        // Calculate project stats
         $projectStats = [
             'total' => $allProjects->count(),
             'active' => $allProjects->where('status', 'active')->count(),
@@ -52,44 +52,71 @@ class DashboardController extends Controller
             ];
         })->values();
 
-        // Calculate task stats from all user projects
-        $allTasks = collect();
-        foreach ($allProjects as $project) {
-            $allTasks = $allTasks->merge($project->tasks);
-        }
+        // Get all tasks for user's projects
+        $allTaskIds = $allProjects->pluck('tasks')->flatten()->pluck('id');
+        $tasksQuery = Task::whereIn('id', $allTaskIds)
+            ->with(['project', 'assignee', 'creator']);
 
+        // Calculate task stats
         $taskStats = [
-            'total' => $allTasks->count(),
-            'todo' => $allTasks->where('status', 'todo')->count(),
-            'in_progress' => $allTasks->where('status', 'in_progress')->count(),
-            'done' => $allTasks->where('status', 'done')->count(),
-            'overdue' => $allTasks->filter(function ($task) {
-                return $task->due_date && Carbon::parse($task->due_date)->isPast() && $task->status !== 'done';
-            })->count(),
+            'total' => $tasksQuery->count(),
+            'todo' => $tasksQuery->where('status', 'todo')->count(),
+            'in_progress' => $tasksQuery->where('status', 'in_progress')->count(),
+            'done' => $tasksQuery->where('status', 'done')->count(),
+            'overdue' => $tasksQuery->overdue()->count(),
         ];
 
-        // Team stats
+        // Get recent tasks (last 5)
+        $recentTasks = $tasksQuery->latest()->take(5)->get()->map(function ($task) {
+            return [
+                'id' => $task->id,
+                'title' => $task->title,
+                'project_id' => $task->project_id,
+                'project_name' => $task->project->name,
+                'status' => $task->status,
+                'priority' => $task->priority,
+                'assignee_name' => $task->assignee ? $task->assignee->name : 'Unassigned',
+                'due_date' => $task->due_date ? $task->due_date->format('Y-m-d') : null,
+                'is_overdue' => $task->is_overdue,
+            ];
+        });
+
+        // Get upcoming deadlines (next 7 days)
+        $upcomingDeadlines = $tasksQuery->upcoming(7)
+            ->orderBy('due_date')
+            ->get()
+            ->map(function ($task) {
+                return [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'due_date' => $task->due_date ? $task->due_date->format('Y-m-d') : null,
+                    'days_remaining' => $task->days_remaining,
+                    'project_name' => $task->project->name,
+                    'priority' => $task->priority,
+                ];
+            });
+
+        // Team stats - simplified without last_active_at
         $teamStats = [
             'members' => User::count(),
-            'online' => User::where('last_active_at', '>=', now()->subMinutes(15))->count(),
+            'online' => User::count(), // Menampilkan jumlah total user sebagai online
         ];
 
         // Chart data
-        $chartData = $this->getTaskChartData($allTasks);
+        $chartData = $this->getTaskChartData($tasksQuery->get());
 
         $stats = [
             'projects' => $projectStats,
             'tasks' => $taskStats,
             'team' => $teamStats,
-            // 'notifications' => $user->unreadNotifications()->count(),
+            'notifications' => 0, // Diset ke 0 karena tidak menggunakan notifikasi
         ];
-        // dd($projectStats);
 
         return Inertia::render('Dashboard', [
             'stats' => $stats,
             'recentProjects' => $recentProjects,
-            'recentTasks' => [], // You can implement this later
-            'upcomingDeadlines' => [], // You can implement this later
+            'recentTasks' => $recentTasks,
+            'upcomingDeadlines' => $upcomingDeadlines,
             'chartData' => $chartData,
         ]);
     }

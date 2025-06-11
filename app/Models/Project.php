@@ -1,5 +1,5 @@
 <?php
-// ===== PROJECT MODEL =====
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,29 +23,6 @@ class Project extends Model
         'start_date' => 'date',
         'end_date' => 'date',
     ];
-
-    protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date',
-    ];
-
-    // Status constants
-    const STATUS_PLANNING = 'planning';
-    const STATUS_IN_PROGRESS = 'in_progress';
-    const STATUS_COMPLETED = 'completed';
-    const STATUS_ON_HOLD = 'on_hold';
-    const STATUS_CANCELLED = 'cancelled';
-
-    public static function getStatuses()
-    {
-        return [
-            self::STATUS_PLANNING => 'Planning',
-            self::STATUS_IN_PROGRESS => 'In Progress',
-            self::STATUS_COMPLETED => 'Completed',
-            self::STATUS_ON_HOLD => 'On Hold',
-            self::STATUS_CANCELLED => 'Cancelled',
-        ];
-    }
 
     // RELATIONS
     public function creator()

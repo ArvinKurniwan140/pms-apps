@@ -5,35 +5,39 @@ Sebuah aplikasi manajemen tugas berbasis web yang memungkinkan tim untuk membuat
 ## 🚀 Fitur Utama
 
 ### Core Features
-- **Authentication JWT**: Login, registrasi, dan otorisasi user berbasis token JWT dengan refresh token
-- **Multi-Role Management**: Admin, Project Manager, dan Team Member dengan permission yang berbeda
-- **Project Management**: CRUD proyek dengan status tracking dan member management
-- **Task Management**: CRUD tugas dengan status (To Do, In Progress, Review, Done)
-- **Comment System**: Komentar nested pada tugas dengan file attachments
-- **Dashboard**: Statistik dan ringkasan proyek, tugas, dan progres
-- **Profile Management**: User dapat mengedit profil diri
+
+-   **Authentication JWT**: Login, registrasi, dan otorisasi user berbasis token JWT dengan refresh token
+-   **Multi-Role Management**: Admin, Project Manager, dan Team Member dengan permission yang berbeda
+-   **Project Management**: CRUD proyek dengan status tracking dan member management
+-   **Task Management**: CRUD tugas dengan status (To Do, In Progress, Review, Done)
+-   **Comment System**: Komentar nested pada tugas dengan file attachments
+-   **Dashboard**: Statistik dan ringkasan proyek, tugas, dan progres
+-   **Profile Management**: User dapat mengedit profil diri
 
 ### Premium Features
-- **Kanban Board**: Drag and drop task management
-- **File Attachments**: Upload file pada komentar dan task
-- **Chart Visualization**: Grafik progres proyek menggunakan Chart.js
+
+-   **Kanban Board**: Drag and drop task management
+-   **File Attachments**: Upload file pada komentar dan task
+-   **Chart Visualization**: Grafik progres proyek menggunakan Chart.js
 
 ## 🏗️ Teknologi yang Digunakan
 
 ### Backend
-- **Laravel 10+** - PHP Framework
-- **MySQL** - Database
-- **JWT Auth** - Authentication dengan refresh token
-- **Spatie Permission** - Role dan permission management
-- **Laravel Echo** - Real-time notifications (optional)
 
-### Frontend  
-- **React 18** - UI Library
-- **TypeScript** - Type-safe JavaScript
-- **Inertia.js** - SPA routing
-- **Tailwind CSS** - Styling framework
-- **Chart.js** - Data visualization
-- **DND Kit** - Drag and drop functionality
+-   **Laravel 10+** - PHP Framework
+-   **MySQL** - Database
+-   **JWT Auth** - Authentication dengan refresh token
+-   **Spatie Permission** - Role dan permission management
+-   **Laravel Echo** - Real-time notifications (optional)
+
+### Frontend
+
+-   **React 18** - UI Library
+-   **TypeScript** - Type-safe JavaScript
+-   **Inertia.js** - SPA routing
+-   **Tailwind CSS** - Styling framework
+-   **Chart.js** - Data visualization
+-   **DND Kit** - Drag and drop functionality
 
 ## 📊 Entity Relationship Diagram (ERD)
 
@@ -51,7 +55,7 @@ erDiagram
         created_at timestamp
         updated_at timestamp
     }
-    
+
     PROJECTS {
         id bigint PK
         name varchar
@@ -67,7 +71,7 @@ erDiagram
         created_at timestamp
         updated_at timestamp
     }
-    
+
     PROJECT_MEMBERS {
         id bigint PK
         project_id bigint FK
@@ -77,7 +81,7 @@ erDiagram
         created_at timestamp
         updated_at timestamp
     }
-    
+
     TASKS {
         id bigint PK
         title varchar
@@ -97,7 +101,7 @@ erDiagram
         created_at timestamp
         updated_at timestamp
     }
-    
+
     COMMENTS {
         id bigint PK
         content text
@@ -110,7 +114,7 @@ erDiagram
         created_at timestamp
         updated_at timestamp
     }
-    
+
     ROLES {
         id bigint PK
         name varchar
@@ -118,7 +122,7 @@ erDiagram
         created_at timestamp
         updated_at timestamp
     }
-    
+
     PERMISSIONS {
         id bigint PK
         name varchar
@@ -126,13 +130,13 @@ erDiagram
         created_at timestamp
         updated_at timestamp
     }
-    
+
     MODEL_HAS_ROLES {
         role_id bigint FK
         model_type varchar
         model_id bigint
     }
-    
+
     ROLE_HAS_PERMISSIONS {
         permission_id bigint FK
         role_id bigint FK
@@ -158,13 +162,14 @@ erDiagram
 ## 🔄 Alur Sistem
 
 ### 1. Authentication Flow
+
 ```mermaid
 sequenceDiagram
     participant U as User
     participant F as Frontend
     participant B as Backend
     participant DB as Database
-    
+
     U->>F: Login Request
     F->>B: POST /api/auth/login
     B->>DB: Validate Credentials
@@ -173,7 +178,7 @@ sequenceDiagram
     B-->>F: Return Tokens + User Data
     F->>F: Store Tokens in Memory
     F-->>U: Redirect to Dashboard
-    
+
     Note over F,B: For subsequent requests
     F->>B: API Request + JWT Token
     B->>B: Validate JWT
@@ -187,47 +192,49 @@ sequenceDiagram
 ```
 
 ### 2. Project Management Flow
+
 ```mermaid
 flowchart TD
     A[User Login] --> B{Check Role}
     B -->|Admin/PM| C[Create Project]
     B -->|All Roles| D[View Projects]
-    
+
     C --> E[Set Project Details]
     E --> F[Assign Team Members]
     F --> G[Create Tasks]
-    
+
     G --> H[Assign Tasks to Members]
     H --> I[Team Members Work on Tasks]
     I --> J[Update Task Status]
     J --> K[Add Comments]
-    
+
     K --> L{Task Complete?}
     L -->|No| I
     L -->|Yes| M[Mark as Done]
-    
+
     D --> N[Select Project]
     N --> O{User Permission}
     O -->|Can Edit| P[Edit Project/Tasks]
     O -->|View Only| Q[View Project Details]
-    
+
     P --> I
     Q --> R[View Task Progress]
 ```
 
 ### 3. Permission System Flow
+
 ```mermaid
 flowchart LR
     A[User Request] --> B[Check Authentication]
     B -->|Authenticated| C[Get User Roles]
     B -->|Not Authenticated| D[Return 401]
-    
+
     C --> E[Check Required Permission]
     E --> F{Has Permission?}
-    
+
     F -->|Yes| G[Allow Access]
     F -->|No| H[Return 403]
-    
+
     subgraph "Role Permissions"
         I[Admin: All Permissions]
         J[Project Manager: Project + Task Management]
@@ -235,38 +242,40 @@ flowchart LR
     end
 ```
 
-
 ## 📋 Roles dan Permissions
 
-| Permission | Admin | Project Manager | Team Member |
-|------------|--------|------------------|-------------|
-| Manage Users | ✅ | ❌ | ❌ |
-| Create Project | ✅ | ✅ | ❌ |
-| Update Project | ✅ | ✅ | ❌ |
-| Delete Project | ✅ | ❌ | ❌ |
-| Assign Tasks | ✅ | ✅ | ❌ |
-| Update Tasks | ✅ | ✅ | ✅* |
-| Comment Tasks | ✅ | ✅ | ✅ |
-| View Dashboard | ✅ | ✅ | ✅ |
+| Permission     | Admin | Project Manager | Team Member |
+| -------------- | ----- | --------------- | ----------- |
+| Manage Users   | ✅    | ❌              | ❌          |
+| Create Project | ✅    | ✅              | ❌          |
+| Update Project | ✅    | ✅              | ❌          |
+| Delete Project | ✅    | ❌              | ❌          |
+| Assign Tasks   | ✅    | ✅              | ❌          |
+| Update Tasks   | ✅    | ✅              | ✅\*        |
+| Comment Tasks  | ✅    | ✅              | ✅          |
+| View Dashboard | ✅    | ✅              | ✅          |
 
-*Team Member hanya bisa update task yang di-assign kepada mereka
+\*Team Member hanya bisa update task yang di-assign kepada mereka
 
 ## 🚀 Cara Deployment
 
 ### Prerequisites
-- PHP 8.1+
-- Composer
-- Node.js 18+
-- MySQL/PostgreSQL
-- Web server (Apache/Nginx)
+
+-   PHP 8.1+
+-   Composer
+-   Node.js 18+
+-   MySQL/PostgreSQL
+-   Web server (Apache/Nginx)
 
 ### 1. Clone Repository
+
 ```bash
 git clone https://github.com/ArvinKurniwan140/pms-apps.git
 cd pms-apps
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 # Install PHP dependencies
 composer install --optimize-autoloader --no-dev
@@ -276,6 +285,7 @@ npm install
 ```
 
 ### 3. Environment Setup
+
 ```bash
 # Copy environment file
 cp .env.example .env
@@ -288,7 +298,9 @@ php artisan jwt:secret
 ```
 
 ### 4. Configure Environment Variables
+
 Edit `.env` file:
+
 ```env
 APP_NAME="Project Management System"
 APP_ENV=production
@@ -323,6 +335,7 @@ PUSHER_APP_CLUSTER=your_cluster
 ```
 
 ### 5. Database Setup
+
 ```bash
 # Run migrations
 php artisan migrate --force
@@ -337,12 +350,14 @@ php artisan view:cache
 ```
 
 ### 6. Build Frontend Assets
+
 ```bash
 # Build production assets
 npm run build
 ```
 
 ### 7. Set File Permissions
+
 ```bash
 # Set proper permissions
 sudo chown -R www-data:www-data storage bootstrap/cache
@@ -352,6 +367,7 @@ sudo chmod -R 775 storage bootstrap/cache
 ### 8. Web Server Configuration
 
 #### Apache (.htaccess)
+
 ```apache
 <IfModule mod_rewrite.c>
     RewriteEngine On
@@ -360,6 +376,7 @@ sudo chmod -R 775 storage bootstrap/cache
 ```
 
 #### Nginx
+
 ```nginx
 server {
     listen 80;
@@ -395,12 +412,14 @@ server {
 ```
 
 ### 9. SSL Certificate (Recommended)
+
 ```bash
 # Using Certbot for Let's Encrypt
 sudo certbot --nginx -d yourdomain.com
 ```
 
 ### 10. Process Management (Optional)
+
 ```bash
 # Install supervisor for queue workers
 sudo apt install supervisor
@@ -410,6 +429,7 @@ sudo nano /etc/supervisor/conf.d/laravel-worker.conf
 ```
 
 Supervisor config:
+
 ```ini
 [program:laravel-worker]
 process_name=%(program_name)s_%(process_num)02d
@@ -422,25 +442,28 @@ redirect_stderr=true
 stdout_logfile=/path/to/your/project/storage/logs/worker.log
 ```
 
-
 ## 🧪 Testing
 
 ### Default Test Users
+
 After seeding, you can login with:
 
-- **Admin**
-  - Email: `admin@example.com`
-  - Password: `password`
+-   **Admin**
 
-- **Project Manager**
-  - Email: `manager@example.com`
-  - Password: `password`
+    -   Email: `admin@example.com`
+    -   Password: `password`
 
-- **Team Member**
-  - Email: `member1@example.com`
-  - Password: `password`
+-   **Project Manager**
+
+    -   Email: `manager@example.com`
+    -   Password: `password`
+
+-   **Team Member**
+    -   Email: `member1@example.com`
+    -   Password: `password`
 
 ### API Testing
+
 API endpoints tersedia di `/api/` dengan Bearer token authentication:
 
 ```bash
@@ -457,7 +480,6 @@ GET /api/auth/me/Bearer Token
 POST /api/auth/refresh/Bearer Token
 ```
 
-
 ## 🤝 Contributing
 
 1. Fork repository
@@ -473,17 +495,22 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🔄 Changelog
 
 ### v1.0.0 (Initial Release)
-- User authentication dengan JWT
-- Project dan task management
-- Comment system
-- Role-based permissions
-- Responsive dashboard
+
+-   User authentication dengan JWT
+-   Project dan task management
+-   Comment system
+-   Role-based permissions
+-   Responsive dashboard
 
 ### v1.1.0 (Planned)
-- Kanban board functionality
-- File attachments
-- Advanced reporting
+
+-   Kanban board functionality
+-   File attachments
+-   Advanced reporting
 
 ---
 
-**Dibuat dengan ❤️ menggunakan Laravel & React TypeScript**
+**Dibuat dengan ❤️ menggunakan Laravel & React TypeScript Oleh Kelompok Persib Juara**
+**152023140 - Arvin Kurniawan**
+**152023147 - Rizki Hidayatulloh**
+**152023159 - Lutfi Perwira**

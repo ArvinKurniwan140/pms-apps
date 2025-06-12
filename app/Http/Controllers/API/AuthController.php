@@ -25,26 +25,56 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request): JsonResponse
     {
+        DB::beginTransaction();
+
         try {
+            // Debug: Log request data
+            Log::debug('Registration attempt with data:', $request->all());
+
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
             ]);
 
+            // Debug: Log created user
+            Log::debug('User created:', $user->toArray());
+
             // Assign default role
             $user->assignRole('Team Member');
+            Log::debug('Role assigned to user');
 
             $token = JWTAuth::fromUser($user);
 
-            return $this->createNewToken($token, $user, 'User registered successfully');
+            DB::commit();
+
+            // Debug: Verify user exists after commit
+            $createdUser = User::find($user->id);
+            Log::debug('User verification after commit:', $createdUser ? $createdUser->toArray() : 'User not found');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User registered successfully',
+                'data' => [
+                    'user' => new UserResource($user->load('roles')),
+                    'token' => $token,
+                    'token_type' => 'bearer',
+                    'expires_in' => config('jwt.ttl') * 60,
+                ]
+            ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Registration failed: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
 
             return response()->json([
                 'success' => false,
                 'message' => 'Registration failed',
-                'error' => $e->getMessage()
+                'error' => env('APP_DEBUG') ? $e->getMessage() : 'Internal server error',
+                'debug_info' => env('APP_DEBUG') ? [
+                    'input_data' => $request->all(),
+                    'exception' => $e->getTrace()
+                ] : null
             ], 500);
         }
     }

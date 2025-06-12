@@ -1,41 +1,52 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
-import { PageProps } from '@/types';
 import {
-    Calendar, CheckSquare, Users, FolderOpen, TrendingUp, Bell, Plus,
-    Filter, Search, BarChart3, Activity, Target, AlertCircle, Clock,
-    ChevronRight, Circle, CheckCircle2, AlertTriangle, Flag
+    Calendar, CheckSquare, Users, FolderOpen, AlertCircle,
+    ChevronRight, Circle, AlertTriangle, Flag, Clock
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import ProjectStatusChart from '@/Components/ProjectStatusChart';
 
-interface DashboardProps extends PageProps {
+interface Role {
+    id: number;
+    name: string;
+    guard_name: string;
+    created_at: string;
+    updated_at: string;
+    pivot: {
+        model_id: number;
+        role_id: number;
+        model_type: string;
+    };
+}
+
+interface DashboardProps {
+    auth: {
+        user: {
+            name: string;
+            email: string;
+            roles: Role[] | string[]; // Handle both object and string roles
+        };
+    };
     stats: {
         projects: {
             total: number;
             active: number;
-            completed: number;
             overdue: number;
         };
         tasks: {
             total: number;
             todo: number;
-            in_progress: number;
-            done: number;
             overdue: number;
         };
         team: {
             members: number;
-            online: number;
         };
-        notifications: number;
     };
     recentProjects: Array<{
         id: number;
         name: string;
-        progress: number;
         status: string;
-        deadline: string;
         team_count: number;
         tasks_count: number;
         days_remaining: number;
@@ -43,11 +54,9 @@ interface DashboardProps extends PageProps {
     recentTasks: Array<{
         id: number;
         title: string;
-        project_id: number;
         project_name: string;
         status: string;
         priority: string;
-        assignee_name: string;
         due_date: string;
         is_overdue: boolean;
     }>;
@@ -59,11 +68,6 @@ interface DashboardProps extends PageProps {
         project_name: string;
         priority: string;
     }>;
-    chartData: {
-        months: string[];
-        taskCounts: number[];
-    };
-
 }
 
 export default function Dashboard({
@@ -71,29 +75,17 @@ export default function Dashboard({
     stats,
     recentProjects,
     recentTasks,
-    upcomingDeadlines,
-    chartData
+    upcomingDeadlines
 }: DashboardProps) {
     const currentUser = auth.user;
-    const isAdmin = currentUser.roles.includes('admin');
-    const isProjectManager = currentUser.roles.includes('project manager');
 
-    if (!currentUser) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center bg-white p-8 rounded-xl shadow-md">
-                    <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                    <p className="text-gray-600 text-lg mb-6">Authentication required</p>
-                    <Link
-                        href="/login"
-                        className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
-                    >
-                        Go to Login
-                    </Link>
-                </div>
-            </div>
-        );
-    }
+    // Safely handle roles whether they're objects or strings
+    const userRoles = Array.isArray(currentUser.roles)
+        ? currentUser.roles.map(role => typeof role === 'string' ? role : role.name)
+        : [];
+
+    const isAdmin = userRoles.includes('Admin');
+    const isProjectManager = userRoles.includes('Project Manager');
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -105,12 +97,10 @@ export default function Dashboard({
 
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
-            case 'todo':
-                return 'bg-gray-100 text-gray-800';
-            case 'in_progress':
-                return 'bg-blue-100 text-blue-800';
-            case 'done':
-                return 'bg-green-100 text-green-800';
+            case 'todo': return 'bg-gray-100 text-gray-800';
+            case 'in_progress': return 'bg-blue-100 text-blue-800';
+            case 'done': return 'bg-green-100 text-green-800';
+            default: return 'bg-gray-100 text-gray-800';
         }
     };
 
@@ -134,21 +124,18 @@ export default function Dashboard({
 
     const formatStatus = (status: string) => {
         if (!status) return '';
-
         return status
             .split('_')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
     };
 
-    // Prepare chart data
-    const chartDataFormatted = chartData.months.map((month, index) => ({
-        name: month,
-        tasks: chartData.taskCounts[index]
-    }));
-
     return (
-        <AuthenticatedLayout user={currentUser}>
+        <AuthenticatedLayout user={{
+            name: currentUser.name,
+            email: currentUser.email || '',
+            roles: userRoles // Pass the processed roles array
+        }}>
             <Head title="Dashboard" />
 
             <div className="py-6 px-4 sm:px-6 lg:px-8 bg-gray-50 min-h-screen">
@@ -193,7 +180,6 @@ export default function Dashboard({
                                 <p className="text-2xl font-bold text-gray-900">{stats.projects.total}</p>
                                 <div className="flex items-center space-x-4 mt-2">
                                     <span className="flex items-center text-sm text-blue-600">
-                                        <Activity className="w-4 h-4 mr-1" />
                                         {stats.projects.active} active
                                     </span>
                                     {stats.projects.overdue > 0 && (
@@ -248,35 +234,13 @@ export default function Dashboard({
                         </div>
                     </div>
 
-                    {/* Completion Card */}
-                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500 mb-1">Completion Rate</p>
-                                <p className="text-2xl font-bold text-gray-900">
-                                    {stats.tasks.total > 0
-                                        ? Math.round((stats.tasks.done / stats.tasks.total) * 100)
-                                        : 0}%
-                                </p>
-                                <div className="flex items-center mt-2">
-                                    <span className="flex items-center text-sm text-green-600">
-                                        <CheckCircle2 className="w-4 h-4 mr-1" />
-                                        {stats.tasks.done} completed
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                                <BarChart3 className="w-6 h-6 text-orange-600" />
-                            </div>
-                        </div>
-                    </div>
+                    <ProjectStatusChart projects={recentProjects} />
                 </div>
 
                 {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                    {/* Recent Projects and Chart */}
+                    {/* Recent Projects */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Recent Projects */}
                         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-bold text-gray-900">Recent Projects</h3>
@@ -325,12 +289,6 @@ export default function Dashboard({
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                                <div
-                                                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full"
-                                                    style={{ width: `${project.progress}%` }}
-                                                ></div>
-                                            </div>
                                         </Link>
                                     ))
                                 ) : (
@@ -338,38 +296,6 @@ export default function Dashboard({
                                         No projects found
                                     </div>
                                 )}
-                            </div>
-                        </div>
-
-                        {/* Tasks Chart */}
-                        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                            <h3 className="text-lg font-bold text-gray-900 mb-4">Tasks Overview</h3>
-                            <div className="h-64">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={chartDataFormatted}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                        <XAxis
-                                            dataKey="name"
-                                            tick={{ fontSize: 12 }}
-                                            axisLine={false}
-                                            tickLine={false}
-                                        />
-                                        <YAxis
-                                            tick={{ fontSize: 12 }}
-                                            axisLine={false}
-                                            tickLine={false}
-                                        />
-                                        <Tooltip />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="tasks"
-                                            stroke="#4f46e5"
-                                            strokeWidth={2}
-                                            dot={{ r: 4 }}
-                                            activeDot={{ r: 6 }}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
                             </div>
                         </div>
                     </div>
@@ -448,38 +374,6 @@ export default function Dashboard({
                                 )}
                             </div>
                         </div>
-
-                        {/* Quick Actions */}
-                        {(isAdmin || isProjectManager) && (
-                            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                                <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
-                                <div className="space-y-3">
-                                    <Link
-                                        href="/projects/create"
-                                        className="w-full flex items-center justify-center space-x-2 bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        <span>New Project</span>
-                                    </Link>
-                                    <Link
-                                        href="/tasks/create"
-                                        className="w-full flex items-center justify-center space-x-2 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                                    >
-                                        <CheckSquare className="w-4 h-4" />
-                                        <span>Add Task</span>
-                                    </Link>
-                                    {isAdmin && (
-                                        <Link
-                                            href="/users"
-                                            className="w-full flex items-center justify-center space-x-2 bg-purple-600 text-white py-2.5 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
-                                        >
-                                            <Users className="w-4 h-4" />
-                                            <span>Manage Team</span>
-                                        </Link>
-                                    )}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>

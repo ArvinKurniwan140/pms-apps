@@ -93,11 +93,10 @@ export default function Sidebar({ currentRoute = 'dashboard' }: SidebarProps) {
                         <Link
                             key={item.name}
                             href={item.href}
-                            className={`group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors ${
-                                isActiveRoute(item.route)
+                            className={`group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors ${isActiveRoute(item.route)
                                     ? 'bg-blue-600 text-white'
                                     : 'text-slate-300 hover:text-white hover:bg-slate-700'
-                            }`}
+                                }`}
                         >
                             <span className={`${isActiveRoute(item.route) ? 'text-white' : 'text-slate-400 group-hover:text-white'}`}>
                                 {item.icon}

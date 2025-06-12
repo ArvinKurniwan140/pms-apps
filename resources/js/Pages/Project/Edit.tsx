@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Project } from '@/types';
+import { Project, Role } from '@/types';
 
 interface Props {
     project: {
@@ -13,9 +13,16 @@ interface Props {
         status: string;
     };
     statusOptions: string[];
+    auth: {
+        user: {
+            name: string;
+            email: string;
+            roles: Role[] | string[];
+        };
+    };
 }
 
-const EditProject = ({ project, statusOptions }: Props) => {
+const EditProject = ({ project, statusOptions, auth }: Props) => {
     const { data, setData, put, errors, processing } = useForm({
         name: project.name,
         description: project.description,
@@ -31,12 +38,15 @@ const EditProject = ({ project, statusOptions }: Props) => {
 
     return (
         <AuthenticatedLayout
-            header={
-                <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-                    Edit Project
-                </h2>
-            }
-        >
+            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">
+                Edit Project
+            </h2>} user={{
+                name: auth.user.name,
+                email: auth.user.email,
+                roles: Array.isArray(auth.user.roles)
+                    ? auth.user.roles.map(role => typeof role === 'string' ? role : role.name)
+                    : []
+            }} >
             <Head title={`Edit ${project.name}`} />
 
             <div className="py-12">

@@ -24,7 +24,7 @@ class AttachmentController extends Controller
         $attachment = Attachment::create([
             'filename' => $file->getClientOriginalName(),
             'path' => $path,
-            'mime_type' => $file->getClientMimeType(),
+            'file_type' => $file->getClientMimeType(),
             'size' => $file->getSize(),
             'attachable_type' => 'App\\Models\\' . ucfirst($request->attachable_type),
             'attachable_id' => $request->attachable_id,
@@ -40,10 +40,13 @@ class AttachmentController extends Controller
     public function download(Attachment $attachment)
     {
         if (!Storage::disk('public')->exists($attachment->path)) {
-            abort(404);
+            abort(404, 'File not found');
         }
 
-        return Storage::disk('public')->download($attachment->path, $attachment->filename);
+        return Storage::disk('public')->download(
+            $attachment->path,
+            $attachment->original_name ?? $attachment->filename
+        );
     }
 
     public function destroy(Attachment $attachment)

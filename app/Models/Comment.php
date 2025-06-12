@@ -10,7 +10,9 @@ class Comment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'task_id', 'user_id', 'content',
+        'task_id',
+        'user_id',
+        'content',
     ];
 
     // RELATIONS
@@ -23,10 +25,9 @@ class Comment extends Model
     {
         return $this->belongsTo(User::class);
     }
-    //attachments
+
     public function attachments()
     {
         return $this->morphMany(Attachment::class, 'attachable');
     }
-// Maka bisa diakses via $comment->attachment_url
 }

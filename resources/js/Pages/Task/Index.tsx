@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
-import { 
-  Plus, 
-  Calendar, 
-  User, 
-  AlertCircle, 
-  Clock, 
-  CheckCircle2, 
+import {
+  Plus,
+  Calendar,
+  User,
+  AlertCircle,
+  Clock,
+  CheckCircle2,
   XCircle,
   Edit,
   Trash2,
@@ -42,7 +42,8 @@ interface CommentAttachment {
   original_name: string;
   file_size: number;
   file_type: string;
-  file_path: string;
+  path: string;
+  comment_id: number;
 }
 
 interface Comment {
@@ -95,6 +96,7 @@ const TaskIndex: React.FC = () => {
     status: 'todo' as 'todo' | 'in_progress' | 'done',
     due_date: ''
   });
+
   const [commentForm, setCommentForm] = useState({
     content: '',
     attachments: [] as File[]
@@ -103,17 +105,6 @@ const TaskIndex: React.FC = () => {
   const [isDragOverColumn, setIsDragOverColumn] = useState<string | null>(null);
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editCommentContent, setEditCommentContent] = useState<string>('');
-
-  // Debug: Log semua data yang diterima
-  useEffect(() => {
-    console.log('=== KANBAN DEBUG INFO ===');
-    console.log('Page Props:', pageData.props);
-    console.log('Initial Tasks:', initialTasks);
-    console.log('Tasks Array Length:', initialTasks?.length || 0);
-    console.log('Auth User:', auth?.user);
-    console.log('Flash Messages:', flash);
-    console.log('=========================');
-  }, [pageData.props, initialTasks, auth, flash]);
 
   // Update tasks when props change (after navigation or refresh)
   useEffect(() => {
@@ -137,7 +128,7 @@ const TaskIndex: React.FC = () => {
       headerBg: 'bg-yellow-100'
     },
     in_progress: {
-      title: 'In Progress', 
+      title: 'In Progress',
       icon: AlertCircle,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
@@ -171,7 +162,7 @@ const TaskIndex: React.FC = () => {
   // Format date
   const formatDate = (dateString: string) => {
     if (!dateString) return 'No due date';
-    
+
     try {
       return new Date(dateString).toLocaleDateString('id-ID', {
         day: 'numeric',
@@ -186,7 +177,7 @@ const TaskIndex: React.FC = () => {
   // Format relative time
   const formatRelativeTime = (dateString: string) => {
     if (!dateString) return '';
-    
+
     try {
       const date = new Date(dateString);
       const now = new Date();
@@ -216,10 +207,22 @@ const TaskIndex: React.FC = () => {
 
   // Get file icon based on file type
   const getFileIcon = (fileType: string) => {
-    if (fileType.startsWith('image/')) {
+    if (!fileType) return File;
+
+    const type = fileType.toLowerCase();
+
+    if (type.startsWith('image/')) {
       return ImageIcon;
-    } else if (fileType.includes('pdf') || fileType.includes('document') || fileType.includes('text')) {
+    } else if (type.includes('pdf')) {
       return FileText;
+    } else if (type.includes('word') || type.includes('document') || type.endsWith('.doc') || type.endsWith('.docx')) {
+      return FileText;
+    } else if (type.includes('excel') || type.includes('spreadsheet') || type.endsWith('.xls') || type.endsWith('.xlsx')) {
+      return FileText;
+    } else if (type.includes('text') || type.endsWith('.txt')) {
+      return FileText;
+    } else if (type.includes('zip') || type.includes('compressed')) {
+      return File;
     }
     return File;
   };
@@ -248,7 +251,7 @@ const TaskIndex: React.FC = () => {
   const handleDrop = useCallback(async (e: React.DragEvent, newStatus: string) => {
     e.preventDefault();
     setIsDragOverColumn(null);
-    
+
     if (!draggedTask || draggedTask.status === newStatus) {
       setDraggedTask(null);
       return;
@@ -256,10 +259,10 @@ const TaskIndex: React.FC = () => {
 
     // Store original tasks for potential rollback
     const originalTasks = [...tasks];
-    
+
     // Optimistic update
-    const updatedTasks = tasks.map(task => 
-      task.id === draggedTask.id 
+    const updatedTasks = tasks.map(task =>
+      task.id === draggedTask.id
         ? { ...task, status: newStatus as Task['status'] }
         : task
     );
@@ -267,8 +270,8 @@ const TaskIndex: React.FC = () => {
 
     try {
       // Send update to server
-      router.patch(`/tasks/${draggedTask.id}`, 
-        { status: newStatus }, 
+      router.patch(`/tasks/${draggedTask.id}`,
+        { status: newStatus },
         {
           preserveState: true,
           preserveScroll: true,
@@ -308,17 +311,16 @@ const TaskIndex: React.FC = () => {
     status: task.status,
     statusType: typeof task.status
   }));
-  console.log('🔍 All task statuses:', allStatuses);
 
   // Delete task
   const handleDelete = async (taskId: number) => {
     if (confirm('Are you sure you want to delete this task?')) {
       // Store original tasks for potential rollback
       const originalTasks = [...tasks];
-      
+
       // Optimistic update - remove task immediately
       setTasks(tasks.filter(task => task.id !== taskId));
-      
+
       router.delete(`/tasks/${taskId}`, {
         preserveState: true,
         preserveScroll: true,
@@ -340,20 +342,21 @@ const TaskIndex: React.FC = () => {
 
   // Safe render helper for user names
   const renderUserName = (user: User | null | undefined) => {
-    if (!user) return 'Unassigned';
+    if (!user || !user.id) return 'Unassigned';
     return user.name || 'Unknown User';
   };
 
   // Safe render helper for project names
   const renderProjectName = (project: Project | null | undefined) => {
-    if (!project) return 'No Project';
+    if (!project || !project.id) return 'No Project';
     return project.name || 'Unknown Project';
   };
 
   // Handle view task
-  const handleViewTask = (task: Task) => {
+  const handleViewTask = (task: Task | null) => {
+    if (!task) return;
     setViewTask(task);
-    setCommentTask(null); // pastikan hanya satu modal aktif
+    setCommentTask(null);
   };
 
   // Handle edit task
@@ -393,9 +396,10 @@ const TaskIndex: React.FC = () => {
   };
 
   // Handle comment task
-  const handleCommentTask = (task: Task) => {
+  const handleCommentTask = (task: Task | null) => {
+    if (!task) return;
     setCommentTask(task);
-    setViewTask(null); // pastikan hanya satu modal aktif
+    setViewTask(null);
     setCommentForm({
       content: '',
       attachments: []
@@ -404,17 +408,24 @@ const TaskIndex: React.FC = () => {
 
   // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const validFiles = files.filter(file => file.size <= 10 * 1024 * 1024); // 10MB limit
-    
-    if (validFiles.length !== files.length) {
-      alert('Some files were too large (max 10MB) and were skipped.');
-    }
-    
+    if (!e.target.files) return;
+
+    const files = Array.from(e.target.files);
+    const validFiles = files.filter(file => {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        alert(`File "${file.name}" is too large (max 10MB)`);
+        return false;
+      }
+      return true;
+    });
+
     setCommentForm(prev => ({
       ...prev,
       attachments: [...prev.attachments, ...validFiles]
     }));
+
+    // Reset input value untuk memungkinkan upload file dengan nama sama
+    e.target.value = '';
   };
 
   // Remove attachment from comment form
@@ -437,51 +448,43 @@ const TaskIndex: React.FC = () => {
       const formData = new FormData();
       formData.append('content', commentForm.content);
       formData.append('task_id', commentTask.id.toString());
-      
+
       // Add attachments
-      commentForm.attachments.forEach((file, index) => {
-        formData.append(`attachments[${index}]`, file);
+      commentForm.attachments.forEach((file) => {
+        formData.append('attachments[]', file); // Pastikan backend bisa handle multiple files
       });
 
-      router.post(`/tasks/${commentTask.id}/comments`, formData, {
+      await router.post(`/tasks/${commentTask.id}/comments`, formData, {
         preserveState: true,
         preserveScroll: true,
         forceFormData: true,
         onSuccess: (page) => {
-          console.log('Comment added successfully');
-          if (page.props && Array.isArray(page.props.tasks)) {
-            setTasks(page.props.tasks);
-            // Update the current commentTask with fresh data
+          if (page.props.tasks && Array.isArray(page.props.tasks)) {
+            setTasks(page.props.tasks as Task[]);
             const updatedTask = page.props.tasks.find((t: Task) => t.id === commentTask.id);
-            if (updatedTask) {
-              setCommentTask(updatedTask);
-            }
+            if (updatedTask) setCommentTask(updatedTask);
           }
           setCommentForm({
             content: '',
             attachments: []
           });
-        },
-        onError: (errors) => {
-          console.error('Failed to add comment:', errors);
-        },
-        onFinish: () => {
-          setIsSubmittingComment(false);
         }
       });
     } catch (error) {
       console.error('Error adding comment:', error);
+    } finally {
       setIsSubmittingComment(false);
     }
   };
 
   // Download attachment
   const handleDownloadAttachment = (attachment: CommentAttachment) => {
-    // Create download link
+    // Gunakan route yang mengembalikan file dari storage
+    const url = `/attachments/${attachment.id}/download`;
+
     const link = document.createElement('a');
-    link.href = `/storage/${attachment.file_path}`;
+    link.href = url;
     link.download = attachment.original_name;
-    link.target = '_blank';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -537,7 +540,7 @@ const TaskIndex: React.FC = () => {
   return (
     <>
       <Head title="Tasks - Kanban Board" />
-      
+
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
@@ -581,13 +584,12 @@ const TaskIndex: React.FC = () => {
               const Icon = config.icon;
               const statusTasks = groupedTasks[status] || [];
               const isDragOver = isDragOverColumn === status;
-              
+
               return (
                 <div
                   key={status}
-                  className={`${config.bgColor} rounded-xl border ${config.borderColor} shadow-sm transition-all duration-200 ${
-                    isDragOver ? 'ring-2 ring-blue-400 ring-opacity-50 transform scale-[1.02]' : ''
-                  }`}
+                  className={`${config.bgColor} rounded-xl border ${config.borderColor} shadow-sm transition-all duration-200 ${isDragOver ? 'ring-2 ring-blue-400 ring-opacity-50 transform scale-[1.02]' : ''
+                    }`}
                   onDragOver={handleDragOver}
                   onDragEnter={(e) => handleDragEnter(e, status)}
                   onDragLeave={handleDragLeave}
@@ -619,7 +621,7 @@ const TaskIndex: React.FC = () => {
                         <div className="flex justify-between items-start mb-3">
                           <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getPriorityColor(task.priority)}`}>
                             {(task.priority || 'medium').toUpperCase()
-                          }</span>
+                            }</span>
                           <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => handleViewTask(task)}
@@ -735,7 +737,7 @@ const TaskIndex: React.FC = () => {
             {Object.entries(statusConfig).map(([status, config]) => {
               const count = groupedTasks[status]?.length || 0;
               const Icon = config.icon;
-              
+
               return (
                 <div key={status} className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
                   <div className="flex items-center">
@@ -771,404 +773,534 @@ const TaskIndex: React.FC = () => {
           )}
         </div>
 
-        {/* View Task Modal (hanya detail, tanpa komentar) */}
-        {viewTask && (
+        {/* Combined Task Detail & Comment Modal */}
+        {(viewTask || commentTask) && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-start p-6 border-b sticky top-0 bg-white">
-                <h2 className="text-xl font-bold text-gray-900">Task Details</h2>
+              <div className="flex justify-between items-start p-6 border-b sticky top-0 bg-white z-10">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    {commentTask ? 'Task Discussion' : 'Task Details'}
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {viewTask?.title || commentTask?.title}
+                  </p>
+                </div>
                 <button
-                  onClick={() => setViewTask(null)}
+                  onClick={() => {
+                    setViewTask(null);
+                    setCommentTask(null);
+                  }}
                   className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded"
                 >
                   <X className="w-6 h-6" />
                 </button>
               </div>
-              
-              <div className="p-6 space-y-6">
-                {/* Title & Status */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{viewTask.title}</h3>
-                  <div className="flex items-center space-x-4 flex-wrap gap-2">
-                    <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getPriorityColor(viewTask.priority)}`}>
-                      {viewTask.priority.toUpperCase()} PRIORITY
-                    </span>
-                    <span className={`px-3 py-1 text-xs font-medium rounded-full border ${
-                      viewTask.status === 'done' ? 'bg-green-100 text-green-800 border-green-200' :
-                      viewTask.status === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                      'bg-yellow-100 text-yellow-800 border-yellow-200'
-                    }`}>
-                      {(statusConfig[viewTask.status as keyof typeof statusConfig]?.title?.toUpperCase()) || viewTask.status.toUpperCase()}
-                    </span>
-                  </div>
-                </div>
-                {/* Description */}
-                {viewTask.description && (
-                  <div>
-                    <h4 className="font-semibold text-gray-700 mb-1">Description</h4>
-                    <p className="text-gray-600">{viewTask.description}</p>
-                  </div>
-                )}
-                {/* Project & Assignee */}
-                <div className="flex flex-wrap gap-6">
-                  <div>
-                    <span className="text-gray-500 text-sm">Project:</span>
-                    <span className="ml-2 font-medium">{renderProjectName(viewTask.project)}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 text-sm">Assignee:</span>
-                    <span className="ml-2 font-medium">{renderUserName(viewTask.assignee)}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 text-sm">Due Date:</span>
-                    <span className="ml-2 font-medium">{formatDate(viewTask.due_date)}</span>
-                  </div>
-                </div>
-                {/* Comments */}
-                <div>
-                  <h4 className="font-semibold text-gray-700 mb-2">Comments</h4>
-                  {viewTask.comments && viewTask.comments.length > 0 ? (
-                    <ul className="space-y-4">
-                      {viewTask.comments.map((comment) => (
-                        <li key={comment.id} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                          <div className="flex items-center mb-1">
-                            <User className="w-4 h-4 mr-1 text-gray-400" />
-                            <span className="font-medium text-gray-800">{renderUserName(comment.user)}</span>
-                            <span className="ml-2 text-xs text-gray-400">{formatRelativeTime(comment.created_at)}</span>
-                          </div>
-                          <div className="text-gray-700 mb-2">{comment.content}</div>
-                          {comment.attachments && comment.attachments.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {comment.attachments.map((att) => {
-                                const Icon = getFileIcon(att.file_type);
-                                return (
-                                  <button
-                                    key={att.id}
-                                    onClick={() => handleDownloadAttachment(att)}
-                                    className="flex items-center px-2 py-1 bg-white border border-gray-200 rounded text-xs hover:bg-gray-100"
-                                    title={att.original_name}
-                                  >
-                                    <Icon className="w-4 h-4 mr-1" />
-                                    <span className="truncate max-w-[100px]">{att.original_name}</span>
-                                    <span className="ml-2 text-gray-400">{formatFileSize(att.file_size)}</span>
-                                    <Download className="w-3 h-3 ml-1 text-gray-400" />
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="text-gray-400 text-sm">No comments yet.</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Comment Task Modal (detail + form komentar) */}
-        {commentTask && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-start p-6 border-b sticky top-0 bg-white">
-                <h2 className="text-xl font-bold text-gray-900">Task Comments</h2>
-                <button
-                  onClick={() => setCommentTask(null)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              <div className="p-6 space-y-6">
-                {/* Task detail ringkas */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{commentTask.title}</h3>
-                  <div className="flex items-center space-x-4 flex-wrap gap-2">
-                    <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getPriorityColor(commentTask.priority)}`}>
-                      {commentTask.priority.toUpperCase()} PRIORITY
-                    </span>
-                    <span className={`px-3 py-1 text-xs font-medium rounded-full border ${
-                      commentTask.status === 'done' ? 'bg-green-100 text-green-800 border-green-200' :
-                      commentTask.status === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                      'bg-yellow-100 text-yellow-800 border-yellow-200'
-                    }`}>
-                      {(statusConfig[commentTask.status as keyof typeof statusConfig]?.title?.toUpperCase()) || commentTask.status.toUpperCase()}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-6 mt-4">
-            <div>
-              <span className="text-gray-500 text-sm">Project:</span>
-              <span className="ml-2 font-medium">{renderProjectName(commentTask.project)}</span>
-            </div>
-            <div>
-              <span className="text-gray-500 text-sm">Assignee:</span>
-              <span className="ml-2 font-medium">{renderUserName(commentTask.assignee)}</span>
-            </div>
-            <div>
-              <span className="text-gray-500 text-sm">Due Date:</span>
-              <span className="ml-2 font-medium">{formatDate(commentTask.due_date)}</span>
-            </div>
-          </div>
-                
-                {/* Comments + form komentar */}
-                <div>
-                  <h4 className="font-semibold text-gray-700 mb-2">Comments</h4>
-                  {commentTask.comments && commentTask.comments.length > 0 ? (
-                    <ul className="space-y-4">
-                      {commentTask.comments.map((comment) => (
-                        <li key={comment.id} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                          <div className="flex items-center mb-1 justify-between">
-                            <div className="flex items-center">
-                              <User className="w-4 h-4 mr-1 text-gray-400" />
-                              <span className="font-medium text-gray-800">{renderUserName(comment.user)}</span>
-                              <span className="ml-2 text-xs text-gray-400">{formatRelativeTime(comment.created_at)}</span>
-                            </div>
-                            <div className="flex gap-1">
-                              <button
-                                className="p-1 text-gray-400 hover:text-green-600 transition-colors rounded"
-                                title="Edit Comment"
-                                onClick={() => handleEditComment(comment)}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button
-                                className="p-1 text-gray-400 hover:text-red-600 transition-colors rounded"
-                                title="Delete Comment"
-                                onClick={() => handleDeleteComment(comment)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                          {editingCommentId === comment.id ? (
-  <form
-    onSubmit={e => {
-      e.preventDefault();
-      handleSaveEditComment(comment);
-    }}
-    className="mb-2"
-  >
-    <textarea
-      className="w-full border rounded p-2 text-sm mb-2"
-      rows={2}
-      value={editCommentContent}
-      onChange={e => setEditCommentContent(e.target.value)}
-      autoFocus
-    />
-    <div className="flex gap-2">
-      <button
-        type="submit"
-        className="px-3 py-1 bg-green-600 text-white text-xs rounded"
-      >
-        Simpan
-      </button>
-      <button
-        type="button"
-        className="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded"
-        onClick={() => setEditingCommentId(null)}
-      >
-        Batal
-      </button>
-    </div>
-  </form>
-) : (
-  <div className="text-gray-700 mb-2">{comment.content}</div>
-)}
-                          {comment.attachments && comment.attachments.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {comment.attachments.map((att) => {
-                                const Icon = getFileIcon(att.file_type);
-                                return (
-                                  <button
-                                    key={att.id}
-                                    onClick={() => handleDownloadAttachment(att)}
-                                    className="flex items-center px-2 py-1 bg-white border border-gray-200 rounded text-xs hover:bg-gray-100"
-                                    title={att.original_name}
-                                  >
-                                    <Icon className="w-4 h-4 mr-1" />
-                                    <span className="truncate max-w-[100px]">{att.original_name}</span>
-                                    <span className="ml-2 text-gray-400">{formatFileSize(att.file_size)}</span>
-                                    <Download className="w-3 h-3 ml-1 text-gray-400" />
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="text-gray-400 text-sm">No comments yet. Semua komentar yang ditambahkan akan muncul di sini sebagai riwayat diskusi tugas.</div>
-                  )}
-
-                  {/* Comment Form */}
-                  <form
-                    className="mt-6 border-t pt-4"
-                    onSubmit={e => {
-                      e.preventDefault();
-                      handleSubmitComment();
+              {/* Tab Navigation */}
+              <div className="border-b">
+                <div className="flex">
+                  <button
+                    className={`px-4 py-3 font-medium text-sm ${!commentTask ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                    onClick={() => {
+                      setViewTask(commentTask || viewTask);
+                      setCommentTask(null);
                     }}
                   >
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Add Comment</label>
-                    <textarea
-                      className="w-full border rounded p-2 mb-2 text-sm"
-                      rows={3}
-                      placeholder="Write a comment..."
-                      value={commentForm.content}
-                      onChange={e => setCommentForm(f => ({ ...f, content: e.target.value }))}
-                      disabled={isSubmittingComment}
-                    />
-                    {/* Attachment Preview */}
-                    {commentForm.attachments.length > 0 && (
-                      <div className="mb-2 flex flex-wrap gap-2">
-                        {commentForm.attachments.map((file, idx) => {
-                          const Icon = getFileIcon(file.type);
-                          return (
-                            <div key={idx} className="flex items-center bg-gray-100 px-2 py-1 rounded text-xs">
-                              <Icon className="w-4 h-4 mr-1" />
-                              <span className="truncate max-w-[100px]">{file.name}</span>
-                              <span className="ml-2 text-gray-400">{formatFileSize(file.size)}</span>
-                              <button
-                                type="button"
-                                className="ml-2 text-red-500 hover:text-red-700"
-                                onClick={() => removeAttachment(idx)}
-                                title="Remove"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          );
-                        })}
+                    Task Details
+                  </button>
+                  <button
+                    className={`px-4 py-3 font-medium text-sm ${commentTask ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                    onClick={() => {
+                      setCommentTask(viewTask || commentTask);
+                      setViewTask(null);
+                    }}
+                  >
+                    Discussion ({((viewTask || commentTask)?.comments?.length || 0)})
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                {/* Task Details View */}
+                {viewTask && (
+                  <div className="space-y-6">
+                    {/* Title & Status */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{viewTask.title}</h3>
+                      <div className="flex flex-wrap gap-2">
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getPriorityColor(viewTask.priority)}`}>
+                          {viewTask.priority.toUpperCase()} PRIORITY
+                        </span>
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full border ${viewTask.status === 'done' ? 'bg-green-100 text-green-800 border-green-200' :
+                          viewTask.status === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                            'bg-yellow-100 text-yellow-800 border-yellow-200'
+                          }`}>
+                          {(statusConfig[viewTask.status as keyof typeof statusConfig]?.title?.toUpperCase()) || viewTask.status.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    {viewTask.description && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="font-semibold text-gray-700 mb-2">Description</h4>
+                        <p className="text-gray-600 whitespace-pre-line">{viewTask.description}</p>
                       </div>
                     )}
-                    <div className="flex items-center gap-2">
-                      <label className="inline-flex items-center cursor-pointer">
-                        <Upload className="w-4 h-4 mr-1" />
-                        <span className="text-xs">Attach file</span>
-                        <input
-                          type="file"
-                          className="hidden"
-                          multiple
-                          onChange={handleFileSelect}
-                          disabled={isSubmittingComment}
-                        />
-                      </label>
+
+                    {/* Task Metadata */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="font-semibold text-gray-700 mb-2">Task Information</h4>
+                        <div className="space-y-2">
+                          <div className="flex items-center">
+                            <span className="text-gray-500 text-sm w-24">Project:</span>
+                            <span className="font-medium">{renderProjectName(viewTask.project)}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-gray-500 text-sm w-24">Assignee:</span>
+                            <span className="font-medium">{renderUserName(viewTask.assignee)}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-gray-500 text-sm w-24">Creator:</span>
+                            <span className="font-medium">{renderUserName(viewTask.creator)}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-gray-500 text-sm w-24">Created:</span>
+                            <span className="font-medium">{formatDate(viewTask.created_at)}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-gray-500 text-sm w-24">Due Date:</span>
+                            <span className={`font-medium ${new Date(viewTask.due_date) < new Date() ? 'text-red-600' : ''
+                              }`}>
+                              {formatDate(viewTask.due_date)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Comments Preview */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="font-semibold text-gray-700">Recent Comments</h4>
+                          <button
+                            onClick={() => {
+                              setCommentTask(viewTask);
+                              setViewTask(null);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                          >
+                            <MessageCircle className="w-4 h-4 mr-1" />
+                            View All
+                          </button>
+                        </div>
+                        {viewTask.comments && viewTask.comments.length > 0 ? (
+                          <ul className="space-y-3">
+                            {viewTask.comments.slice(0, 2).map((comment) => (
+                              <li key={comment.id} className="border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <span className="font-medium text-sm text-gray-800">{renderUserName(comment.user)}</span>
+                                    <span className="ml-2 text-xs text-gray-400">{formatRelativeTime(comment.created_at)}</span>
+                                  </div>
+                                </div>
+                                <p className="text-gray-600 text-sm mt-1 line-clamp-2">{comment.content}</p>
+                                {comment.attachments && comment.attachments.length > 0 && (
+                                  <div className="mt-1">
+                                    <span className="text-xs text-gray-500">
+                                      {comment.attachments.length} attachment{comment.attachments.length !== 1 ? 's' : ''}
+                                    </span>
+                                  </div>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-gray-400 text-sm">No comments yet</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end gap-2 pt-4">
                       <button
-                        type="submit"
-                        className="inline-flex items-center px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors"
-                        disabled={isSubmittingComment || (!commentForm.content.trim() && commentForm.attachments.length === 0)}
+                        onClick={() => handleEditTask(viewTask)}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 flex items-center"
                       >
-                        <Send className="w-4 h-4 mr-1" />
-                        {isSubmittingComment ? 'Sending...' : 'Send'}
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit Task
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCommentTask(viewTask);
+                          setViewTask(null);
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
+                      >
+                        <MessageCircle className="w-4 h-4 mr-1" />
+                        Add Comment
                       </button>
                     </div>
-                  </form>
-                </div>
+                  </div>
+                )}
+
+                {/* Comments View */}
+                {commentTask && (
+                  <div className="space-y-6">
+                    {/* Task Summary */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{commentTask.title}</h3>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(commentTask.priority)}`}>
+                          {commentTask.priority.toUpperCase()}
+                        </span>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full border ${commentTask.status === 'done' ? 'bg-green-100 text-green-800 border-green-200' :
+                          commentTask.status === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                            'bg-yellow-100 text-yellow-800 border-yellow-200'
+                          }`}>
+                          {statusConfig[commentTask.status as keyof typeof statusConfig]?.title}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          Due: {formatDate(commentTask.due_date)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Comments List */}
+                    <div>
+                      <h4 className="font-semibold text-gray-700 mb-4">Discussion ({commentTask.comments?.length || 0})</h4>
+
+                      {commentTask?.comments?.length > 0 ? (
+                        <ul className="space-y-4">
+                          {commentTask.comments?.map((comment) => (
+                            <li key={comment?.id} className="border border-gray-200 rounded-lg p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center">
+                                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-2">
+                                    <User className="w-4 h-4 text-gray-500" />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-gray-800">{renderUserName(comment.user)}</p>
+                                    <p className="text-xs text-gray-400">{formatRelativeTime(comment.created_at)}</p>
+                                  </div>
+                                </div>
+                                {auth?.user?.id === comment?.user?.id && (
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => handleEditComment(comment)}
+                                      className="p-1 text-gray-400 hover:text-blue-600 transition-colors rounded"
+                                      title="Edit Comment"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteComment(comment)}
+                                      className="p-1 text-gray-400 hover:text-red-600 transition-colors rounded"
+                                      title="Delete Comment"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+
+                              {editingCommentId === comment.id ? (
+                                <form
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    handleSaveEditComment(comment);
+                                  }}
+                                  className="mb-2"
+                                >
+                                  <textarea
+                                    className="w-full border rounded p-2 text-sm mb-2"
+                                    rows={3}
+                                    value={editCommentContent}
+                                    onChange={(e) => setEditCommentContent(e.target.value)}
+                                    autoFocus
+                                  />
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="submit"
+                                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded"
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded"
+                                      onClick={() => setEditingCommentId(null)}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </form>
+                              ) : (
+                                <div className="text-gray-700 mb-3 whitespace-pre-line">{comment.content}</div>
+                              )}
+
+                              {comment.attachments && comment.attachments.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-gray-100">
+                                  <h5 className="text-xs font-medium text-gray-500 mb-2">Attachments</h5>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {comment.attachments.map((attachment) => {
+                                      const Icon = getFileIcon(attachment.file_type); // Gunakan mime_type
+                                      return (
+                                        <div
+                                          key={attachment.id}
+                                          className="flex items-center p-2 border border-gray-200 rounded hover:bg-gray-50 cursor-pointer"
+                                          onClick={() => handleDownloadAttachment(attachment)}
+                                        >
+                                          <div className="p-2 bg-gray-100 rounded mr-2">
+                                            <Icon className="w-4 h-4 text-gray-500" />
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-800 truncate">
+                                              {attachment.original_name}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                              {formatFileSize(attachment.file_size)}
+                                            </p>
+                                          </div>
+                                          <Download className="w-4 h-4 text-gray-400 ml-2" />
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="text-center py-8 text-gray-400">
+                          <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                          <p className="text-sm">No comments yet</p>
+                          <p className="text-xs mt-1">Start the discussion by adding the first comment</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Add Comment Form */}
+                    <div className="border-t pt-4">
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleSubmitComment();
+                        }}
+                      >
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Add Comment</label>
+                        <textarea
+                          className="w-full border rounded p-3 text-sm mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          rows={4}
+                          placeholder="Write your comment here..."
+                          value={commentForm.content}
+                          onChange={(e) => setCommentForm({ ...commentForm, content: e.target.value })}
+                          disabled={isSubmittingComment}
+                        />
+
+                        {/* Attachment Preview */}
+                        {commentForm.attachments.length > 0 && (
+                          <div className="mb-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-medium text-gray-500">Attachments</span>
+                              <span className="text-xs text-gray-400">
+                                {commentForm.attachments.length} file{commentForm.attachments.length !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            <div className="space-y-2">
+                              {commentForm.attachments.map((file, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-200"
+                                >
+                                  <div className="flex items-center">
+                                    <div className="p-1 bg-gray-100 rounded mr-2">
+                                      {(() => {
+                                        const Icon = getFileIcon(file.type);
+                                        return <Icon className="w-4 h-4 text-gray-500" />;
+                                      })()}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-gray-800 truncate max-w-xs">
+                                        {file.name}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {formatFileSize(file.size)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="text-red-500 hover:text-red-700 p-1"
+                                    onClick={() => removeAttachment(index)}
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                          <label className="inline-flex items-center cursor-pointer bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md transition-colors">
+                            <Paperclip className="w-4 h-4 mr-2" />
+                            <span className="text-sm">Add Attachment</span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              multiple
+                              onChange={handleFileSelect}
+                              disabled={isSubmittingComment}
+                              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                            />
+                          </label>
+
+                          <button
+                            type="submit"
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-70"
+                            disabled={isSubmittingComment || (!commentForm.content.trim() && commentForm.attachments.length === 0)}
+                          >
+                            {isSubmittingComment ? (
+                              <>
+                                <svg
+                                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  ></circle>
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  ></path>
+                                </svg>
+                                Posting...
+                              </>
+                            ) : (
+                              <>
+                                <Send className="w-4 h-4 mr-1" />
+                                Post Comment
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
+
         {/* Edit Task Modal, Comment Modal, dst. bisa dilanjutkan sesuai kebutuhan */}
       </div>
-    {/* Edit Task Modal */}
-    {editTask && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-between items-start p-6 border-b sticky top-0 bg-white">
-            <h2 className="text-xl font-bold text-gray-900">Edit Task</h2>
-            <button
-              onClick={() => setEditTask(null)}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-          <form
-            className="p-6 space-y-4"
-            onSubmit={e => {
-              e.preventDefault();
-              handleSaveEdit();
-            }}
-          >
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-              <input
-                type="text"
-                className="w-full border rounded p-2 text-sm"
-                value={editForm.title}
-                onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                className="w-full border rounded p-2 text-sm"
-                rows={3}
-                value={editForm.description}
-                onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-              />
-            </div>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                <select
-                  className="w-full border rounded p-2 text-sm"
-                  value={editForm.priority}
-                  onChange={e => setEditForm(f => ({ ...f, priority: e.target.value as 'low' | 'medium' | 'high' }))}
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  className="w-full border rounded p-2 text-sm"
-                  value={editForm.status}
-                  onChange={e => setEditForm(f => ({ ...f, status: e.target.value as 'todo' | 'in_progress' | 'done' }))}
-                >
-                  <option value="todo">To Do</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="done">Completed</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-              <input
-                type="date"
-                className="w-full border rounded p-2 text-sm"
-                value={editForm.due_date}
-                onChange={e => setEditForm(f => ({ ...f, due_date: e.target.value }))}
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
+      {/* Edit Task Modal */}
+      {editTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start p-6 border-b sticky top-0 bg-white">
+              <h2 className="text-xl font-bold text-gray-900">Edit Task</h2>
               <button
-                type="button"
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
                 onClick={() => setEditTask(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
-              >
-                <Save className="w-4 h-4 mr-1" />
-                Save
+                <X className="w-6 h-6" />
               </button>
             </div>
-          </form>
+            <form
+              className="p-6 space-y-4"
+              onSubmit={e => {
+                e.preventDefault();
+                handleSaveEdit();
+              }}
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <input
+                  type="text"
+                  className="w-full border rounded p-2 text-sm"
+                  value={editForm.title}
+                  onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  className="w-full border rounded p-2 text-sm"
+                  rows={3}
+                  value={editForm.description}
+                  onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                />
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select
+                    className="w-full border rounded p-2 text-sm"
+                    value={editForm.priority}
+                    onChange={e => setEditForm(f => ({ ...f, priority: e.target.value as 'low' | 'medium' | 'high' }))}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    className="w-full border rounded p-2 text-sm"
+                    value={editForm.status}
+                    onChange={e => setEditForm(f => ({ ...f, status: e.target.value as 'todo' | 'in_progress' | 'done' }))}
+                  >
+                    <option value="todo">To Do</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="done">Completed</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                <input
+                  type="date"
+                  className="w-full border rounded p-2 text-sm"
+                  value={editForm.due_date}
+                  onChange={e => setEditForm(f => ({ ...f, due_date: e.target.value }))}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                  onClick={() => setEditTask(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
+                >
+                  <Save className="w-4 h-4 mr-1" />
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
-    )}
-  </>
+      )}
+    </>
   );
 };
 

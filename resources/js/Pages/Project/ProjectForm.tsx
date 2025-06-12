@@ -1,6 +1,7 @@
 import React from 'react';
 import { useForm, Head, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Role } from '@/types';
 
 interface Props {
     project?: {
@@ -12,9 +13,16 @@ interface Props {
         status: string;
     };
     statusOptions: string[];
+    auth: {
+        user: {
+            name: string;
+            email: string;
+            roles: Role[] | string[];
+        };
+    };
 }
 
-const ProjectForm = ({ project, statusOptions }: Props) => {
+const ProjectForm = ({ project, statusOptions, auth }: Props) => {
     const { data, setData, post, put, processing, errors } = useForm({
         name: project?.name || '',
         description: project?.description || '',
@@ -38,12 +46,15 @@ const ProjectForm = ({ project, statusOptions }: Props) => {
 
     return (
         <AuthenticatedLayout
-            header={
-                <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-                    {project?.id ? 'Edit Project' : 'Create Project'}
-                </h2>
-            }
-        >
+            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">
+                {project?.id ? 'Edit Project' : 'Create Project'}
+            </h2>} user={{
+                name: auth.user.name,
+                email: auth.user.email,
+                roles: Array.isArray(auth.user.roles)
+                    ? auth.user.roles.map(role => typeof role === 'string' ? role : role.name)
+                    : []
+            }}>
             <Head title={project?.id ? 'Edit Project' : 'Create Project'} />
 
             <div className="py-6">

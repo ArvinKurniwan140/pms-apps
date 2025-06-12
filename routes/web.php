@@ -11,6 +11,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\TaskCommentController;
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\ProjectMemberController;
+use Illuminate\Support\Facades\Storage;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,10 +40,16 @@ Route::get('/unauthorized', function () {
 })->name('unauthorized');
 Route::resource('projects', ProjectController::class);
 
+Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
+    Route::resource('users', \App\Http\Controllers\Admin\UserController::class)->except(['show']);
+});
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::resource('users', UserController::class)->middleware('can:manage users');
 
     // Project Routes
     Route::prefix('projects')->name('projects.')->group(function () {
@@ -66,6 +74,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/{project}/members', [ProjectController::class, 'addMember'])
             ->middleware(['auth', 'role:Admin|Project Manager']);
 
+        Route::delete('/{project}/members/{member}', [ProjectMemberController::class, 'destroy'])->name('projects.members.destroy');
 
         // Project Tasks
         Route::get('/{project}/tasks', [ProjectController::class, 'tasks'])->name('tasks');
@@ -79,7 +88,7 @@ Route::middleware('auth')->group(function () {
             ->name('settings.update')
             ->middleware('permission:update project');
     });
-    
+
     Route::prefix('tasks')->name('tasks.')->middleware('auth')->group(function () {
         // Task List (optional: all tasks visible to user)
         Route::get('/', [TaskController::class, 'index'])->name('index');
@@ -122,17 +131,14 @@ Route::middleware('auth')->group(function () {
 
         // Task Comments - CRUD Routes
         Route::post('/{task}/comments', [TaskCommentController::class, 'store'])
-            ->name('comments.store')
-            ->middleware('permission:comment tasks');
+            ->name('comments.store');
         Route::patch('/{task}/comments/{comment}', [TaskCommentController::class, 'update'])
-            ->name('comments.update')
-            ->middleware('permission:comment tasks');
+            ->name('comments.update');
         Route::delete('/{task}/comments/{comment}', [TaskCommentController::class, 'destroy'])
-            ->name('comments.destroy')
-            ->middleware('permission:comment tasks');
-        
-        Route::post('/attachments', [AttachmentController::class, 'store']);
-        Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download'])->name('attachments.download');
+            ->name('comments.destroy');
+
+        Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download'])
+            ->name('attachments.download');
         Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy']);
     });
 });

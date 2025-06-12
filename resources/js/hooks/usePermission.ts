@@ -18,10 +18,10 @@ export const usePermissions = () => {
     const canManageRoles = () => hasPermission('manage-roles');
 
     // Role checks
-    const isAdmin = () => hasRole('admin');
-    const isProjectManager = () => hasRole('project-manager');
-    const isTeamMember = () => hasRole('team-member');
-    const isManagerOrAdmin = () => hasAnyRole(['admin', 'project-manager']);
+    const isAdmin = () => hasRole('Admin');
+    const isProjectManager = () => hasRole('Project Manager');
+    const isTeamMember = () => hasRole('Team Member');
+    const isManagerOrAdmin = () => hasAnyRole(['Admin', 'Project Manager']);
 
     // Combined permission checks for common use cases
     const canManageProjects = () => canCreateProject() || canUpdateProject() || canDeleteProject();
@@ -34,7 +34,7 @@ export const usePermissions = () => {
         isProjectManager,
         isTeamMember,
         isManagerOrAdmin,
-        
+
         // Individual permission checks
         canManageUsers,
         canManageRoles,
@@ -48,12 +48,12 @@ export const usePermissions = () => {
         canViewDashboard,
         canViewProjects,
         canViewTasks,
-        
+
         // Combined permission checks
         canManageProjects,
         canManageTasks,
         hasBasicAccess,
-        
+
         // General utilities
         hasRole,
         hasPermission,

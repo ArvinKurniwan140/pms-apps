@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\project_member;
 use App\Http\Requests\Storeproject_memberRequest;
 use App\Http\Requests\Updateproject_memberRequest;
+use App\Models\Project;
+use App\Models\User;
 
 class ProjectMemberController extends Controller
 {
@@ -59,8 +61,14 @@ class ProjectMemberController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(project_member $project_member)
+    public function destroy(Project $project, User $member)
     {
-        //
+        // Authorization check
+        $this->authorize('removeMember', $project);
+
+        // Hapus member dari project
+        $project->members()->detach($member->id);
+
+        return back()->with('success', 'Member removed successfully');
     }
 }

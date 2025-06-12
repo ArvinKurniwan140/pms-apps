@@ -1,18 +1,15 @@
-// resources/js/Components/AuthenticatedLayout.tsx
 import React, { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
-import { useAuth } from '@/contexts/AuthContext';
-import { User } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Menu, 
-  X, 
-  Home, 
-  FolderOpen, 
-  CheckSquare, 
-  Users, 
-  Settings, 
-  Bell, 
+import {
+  Menu,
+  X,
+  Home,
+  FolderOpen,
+  CheckSquare,
+  Users,
+  Settings,
+  Bell,
   Search,
   Calendar,
   BarChart3,
@@ -27,35 +24,23 @@ import {
   PanelLeftClose,
   PanelLeftOpen
 } from 'lucide-react';
+import { AdminOnly } from '@/Components/RoleBasedComponent';
 
 interface AuthenticatedLayoutProps {
   header?: ReactNode;
-  user?: User;
-}
-
-interface PageProps {
-  auth: {
-    user: User;
+  user: {
+    name: string;
+    email?: string;
+    roles?: string[];
   };
-  [key: string]: unknown;
 }
 
-const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>> = ({ 
-  header, 
+const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>> = ({
+  header,
   children,
-  user 
+  user
 }) => {
-  // Gunakan JWT AuthContext sebagai prioritas utama
-  const { 
-    user: authUser, 
-    logout: authLogout, 
-    hasRole, 
-    hasAnyRole,
-    isLoading 
-  } = useAuth();
-  
-  // Fallback ke Inertia auth jika JWT tidak tersedia
-  const { auth } = usePage<PageProps>().props;
+  const { auth } = usePage().props;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarProfileDropdownOpen, setSidebarProfileDropdownOpen] = useState(false);
   const [navbarProfileDropdownOpen, setNavbarProfileDropdownOpen] = useState(false);
@@ -71,7 +56,6 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
     }
   }, [darkMode]);
 
-  // Load collapsed state from localStorage
   useEffect(() => {
     const savedCollapsed = localStorage.getItem('sidebar-collapsed');
     if (savedCollapsed) {
@@ -79,25 +63,21 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
     }
   }, []);
 
-  // Save collapsed state to localStorage
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', JSON.stringify(sidebarCollapsed));
   }, [sidebarCollapsed]);
-  
-  // Prioritaskan user dari JWT AuthContext
-  const currentUser = authUser || user || auth?.user;
-  
-  // Gunakan helper dari AuthContext untuk role checking
-  const isAdmin = hasRole('admin');
-  const isProjectManager = hasRole('project manager');
+
+  const currentUser = user || auth?.user;
+
+  const isAdmin = currentUser?.roles?.includes('Admin');
+  const isProjectManager = currentUser?.roles?.includes('Project Manager');
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home, current: true },
     { name: 'Projects', href: '/projects', icon: FolderOpen, current: false },
     { name: 'Tasks', href: '/tasks', icon: CheckSquare, current: false },
-    { name: 'Calendar', href: '/calendar', icon: Calendar, current: false },
-    { name: 'Team', href: '/team', icon: Users, current: false },
-    { name: 'Analytics', href: '/analytics', icon: BarChart3, current: false, adminOnly: true },
+    // { name: 'Calendar', href: '/calendar', icon: Calendar, current: false },
+    { name: 'Manage User', href: '/users', icon: Users, current: false, adminOnly: true },
   ];
 
   const userNavigation = [
@@ -105,98 +85,36 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
     { name: 'Settings', href: '/settings' },
   ];
 
-  const filteredNavigation = navigation.filter(item => 
-    !item.adminOnly || (item.adminOnly && (isAdmin || isProjectManager))
+  const filteredNavigation = navigation.filter(item =>
+    !item.adminOnly || (item.adminOnly && (isAdmin))
   );
 
-  // Handle logout untuk Laravel Breeze
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
-    
-    if (isLoggingOut) return; // Mencegah multiple clicks
-    
+    if (isLoggingOut) return;
+
     setIsLoggingOut(true);
-    setSidebarProfileDropdownOpen(false); // Tutup dropdown sidebar
-    setNavbarProfileDropdownOpen(false); // Tutup dropdown navbar
-    
-    try {
-      if (authUser && localStorage.getItem('pms_token')) {
-        // Jika menggunakan JWT authentication
-        console.log('Logging out with JWT...');
-        
-        // Logout dari server JWT terlebih dahulu
-        try {
-          await authLogout();
-          console.log('JWT logout successful');
-        } catch (jwtError) {
-          console.error('JWT logout failed:', jwtError);
-          // Tetap lanjut untuk cleanup lokal
-        }
-        
-        // Cleanup token lokal
-        localStorage.removeItem('pms_token');
-        
-        // Kemudian logout dari Laravel session juga (jika ada)
-        router.post('/logout', {}, {
-          onSuccess: () => {
-            console.log('Laravel session logout successful');
-            window.location.href = '/login';
-          },
-          onError: (errors) => {
-            console.error('Laravel logout errors:', errors);
-            // Force redirect meskipun ada error
-            window.location.href = '/login';
-          },
-          onFinish: () => {
-            setIsLoggingOut(false);
-          }
-        });
-        
-      } else {
-        // Menggunakan Laravel Breeze default logout saja
-        console.log('Logging out with Laravel Breeze...');
-        router.post('/logout', {}, {
-          onStart: () => {
-            console.log('Laravel logout started');
-          },
-          onSuccess: (page) => {
-            console.log('Laravel logout successful', page);
-            // Pastikan redirect ke login
-            window.location.href = '/login';
-          },
-          onError: (errors) => {
-            console.error('Laravel logout errors:', errors);
-            setIsLoggingOut(false);
-          },
-          onFinish: () => {
-            console.log('Laravel logout finished');
-            setIsLoggingOut(false);
-          }
-        });
+    setSidebarProfileDropdownOpen(false);
+    setNavbarProfileDropdownOpen(false);
+
+    router.post('/logout', {}, {
+      onSuccess: () => {
+        window.location.href = '/login';
+      },
+      onError: () => {
+        window.location.href = '/login';
+      },
+      onFinish: () => {
+        setIsLoggingOut(false);
       }
-    } catch (error) {
-      console.error('Logout error:', error);
-      setIsLoggingOut(false);
-      
-      // Force cleanup dan redirect jika ada error
-      localStorage.removeItem('pms_token');
-      
-      // Fallback dengan router.post
-      router.post('/logout', {}, {
-        onSuccess: () => window.location.href = '/login',
-        onError: () => window.location.href = '/login',
-        onFinish: () => setIsLoggingOut(false)
-      });
-    }
+    });
   };
 
-  // Handle sidebar toggle
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
-  // Loading state
-  if (isLoading) {
+  if (!currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -208,7 +126,7 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 flex z-40 md:hidden"
           onClick={() => setSidebarOpen(false)}
         >
@@ -217,9 +135,8 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
       )}
 
       {/* Mobile sidebar */}
-      <div className={`fixed inset-y-0 left-0 flex flex-col w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50 md:hidden ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      <div className={`fixed inset-y-0 left-0 flex flex-col w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50 md:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
@@ -241,15 +158,13 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
             <Link
               key={item.name}
               href={item.href}
-              className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                item.current
-                  ? 'bg-indigo-50 text-indigo-700 border-r-2 border-indigo-500'
-                  : 'text-gray-700 hover:bg-gray-50 hover:text-indigo-600'
-              }`}
+              className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${item.current
+                ? 'bg-indigo-50 text-indigo-700 border-r-2 border-indigo-500'
+                : 'text-gray-700 hover:bg-gray-50 hover:text-indigo-600'
+                }`}
             >
-              <item.icon className={`mr-3 h-5 w-5 ${
-                item.current ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500'
-              }`} />
+              <item.icon className={`mr-3 h-5 w-5 ${item.current ? 'text-indigo-500' : 'text-gray-400 group-hover:text-indigo-500'
+                }`} />
               {item.name}
             </Link>
           ))}
@@ -268,7 +183,7 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
               <p className="text-xs text-gray-500">{currentUser?.email}</p>
             </div>
           </div>
-          
+
           {/* Mobile logout button */}
           <button
             onClick={handleLogout}
@@ -297,7 +212,7 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
                 </div>
               )}
             </div>
-            
+
             {/* Collapse Toggle Button - moved here */}
             <button
               onClick={toggleSidebar}
@@ -318,20 +233,18 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
               <div key={item.name} className="relative group">
                 <Link
                   href={item.href}
-                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
-                    item.current
-                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-indigo-600 hover:shadow-md'
-                  } ${sidebarCollapsed ? 'justify-center' : ''}`}
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${item.current
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-indigo-600 hover:shadow-md'
+                    } ${sidebarCollapsed ? 'justify-center' : ''}`}
                 >
-                  <item.icon className={`h-5 w-5 shrink-0 ${
-                    item.current ? 'text-white' : 'text-gray-400 group-hover:text-indigo-500'
-                  } ${sidebarCollapsed ? '' : 'mr-4'}`} />
+                  <item.icon className={`h-5 w-5 shrink-0 ${item.current ? 'text-white' : 'text-gray-400 group-hover:text-indigo-500'
+                    } ${sidebarCollapsed ? '' : 'mr-4'}`} />
                   {!sidebarCollapsed && (
                     <span className="whitespace-nowrap overflow-hidden">{item.name}</span>
                   )}
                 </Link>
-                
+
                 {/* Tooltip for collapsed state */}
                 {sidebarCollapsed && (
                   <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
@@ -346,7 +259,7 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
           {!sidebarCollapsed ? (
             <div className="border-t border-gray-200 p-4">
               <div className="relative">
-                <button 
+                <button
                   onClick={() => setSidebarProfileDropdownOpen(!sidebarProfileDropdownOpen)}
                   className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors"
                 >
@@ -363,9 +276,8 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
                       </p>
                     </div>
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${
-                    sidebarProfileDropdownOpen ? 'rotate-180' : ''
-                  }`} />
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${sidebarProfileDropdownOpen ? 'rotate-180' : ''
+                    }`} />
                 </button>
 
                 {/* Profile dropdown */}
@@ -398,7 +310,7 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
             // Collapsed user section - only avatar
             <div className="border-t border-gray-200 p-4">
               <div className="relative group">
-                <button 
+                <button
                   onClick={() => setSidebarProfileDropdownOpen(!sidebarProfileDropdownOpen)}
                   className="w-full flex items-center justify-center p-3 rounded-xl hover:bg-gray-50 transition-colors"
                 >
@@ -408,7 +320,7 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
                     </span>
                   </div>
                 </button>
-                
+
                 {/* Tooltip for collapsed user */}
                 <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                   {currentUser?.name}
@@ -417,43 +329,43 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
                 {/* Profile dropdown for collapsed state */}
                 <AnimatePresence>
 
-                {sidebarProfileDropdownOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute bottom-full left-0 right-0 mb-2 origin-top bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50"
-                  >
-                  <div className="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
-                    <div className="px-4 py-2 border-b border-gray-200">
-                      <p className="text-sm font-medium text-gray-900 truncate">{currentUser?.name}</p>
-                      <p className="text-xs text-gray-500 capitalize truncate">
-                        {currentUser?.roles?.[0] || 'Team Member'}
-                      </p>
-                    </div>
-                    {userNavigation.map((item) => (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => setSidebarProfileDropdownOpen(false)}
-                      >
-                        {item.name}
-                      </Link>
-                    ))}
-                    <hr className="my-2 border-gray-200" />
-                    <button
-                      onClick={handleLogout}
-                      disabled={isLoggingOut}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center disabled:opacity-50"
+                  {sidebarProfileDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute bottom-full left-0 right-0 mb-2 origin-top bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50"
                     >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      {isLoggingOut ? 'Signing out...' : 'Sign out'}
-                    </button>
-                  </div>
-                  </motion.div>
-                )}
+                      <div className="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
+                        <div className="px-4 py-2 border-b border-gray-200">
+                          <p className="text-sm font-medium text-gray-900 truncate">{currentUser?.name}</p>
+                          <p className="text-xs text-gray-500 capitalize truncate">
+                            {currentUser?.roles?.[0] || 'Team Member'}
+                          </p>
+                        </div>
+                        {userNavigation.map((item) => (
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            onClick={() => setSidebarProfileDropdownOpen(false)}
+                          >
+                            {item.name}
+                          </Link>
+                        ))}
+                        <hr className="my-2 border-gray-200" />
+                        <button
+                          onClick={handleLogout}
+                          disabled={isLoggingOut}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center disabled:opacity-50"
+                        >
+                          <LogOut className="w-4 h-4 mr-2" />
+                          {isLoggingOut ? 'Signing out...' : 'Sign out'}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
                 </AnimatePresence>
               </div>
             </div>
@@ -509,7 +421,7 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
 
               {/* Desktop user avatar */}
               <div className="hidden md:block relative">
-                <button 
+                <button
                   onClick={() => setNavbarProfileDropdownOpen(!navbarProfileDropdownOpen)}
                   className="flex items-center space-x-3 p-2 rounded-xl hover:bg-gray-100 transition-colors"
                 >
@@ -521,7 +433,7 @@ const AuthenticatedLayout: React.FC<PropsWithChildren<AuthenticatedLayoutProps>>
                   <span className="text-sm font-medium text-gray-700">{currentUser?.name}</span>
                   <ChevronDown className="w-4 h-4 text-gray-400" />
                 </button>
-                
+
                 {/* Desktop top profile dropdown */}
                 {navbarProfileDropdownOpen && (
                   <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">

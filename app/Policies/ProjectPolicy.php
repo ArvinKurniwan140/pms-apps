@@ -49,4 +49,9 @@ class ProjectPolicy
     {
         return $user->can('delete project') && $user->id === $project->created_by;
     }
+
+    public function removeMember(User $user, Project $project)
+    {
+        return $user->id === $project->created_by || $user->isAdmin();
+    }
 }

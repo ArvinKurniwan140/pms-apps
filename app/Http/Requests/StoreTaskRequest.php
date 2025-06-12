@@ -20,12 +20,13 @@ class StoreTaskRequest extends FormRequest
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
-{
-    return [
-        'title' => 'required|string|max:255',
-        'project_id' => 'required|exists:projects,id',
-        // field lain ...
-    ];
-}
-
+    {
+        return [
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'project_id' => 'required|exists:projects,id',
+            'assigned_to' => 'required|exists:users,id',
+            'due_date' => 'nullable|date',
+        ];
+    }
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Project } from '@/types';
+import { Project, Role } from '@/types';
 
 interface Props {
   projects: Project[];
@@ -9,6 +9,13 @@ interface Props {
     create: boolean;
     edit: boolean;
     delete: boolean;
+  };
+  auth: {
+    user: {
+      name: string;
+      email: string;
+      roles: Role[] | string[];
+    };
   };
 }
 
@@ -19,7 +26,7 @@ interface PageProps {
   };
 }
 
-const ProjectIndex = ({ projects, can }: Props) => {
+const ProjectIndex = ({ projects, can, auth }: Props) => {
   const { props } = usePage<PageProps>();
   const { flash } = props;
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -61,12 +68,15 @@ const ProjectIndex = ({ projects, can }: Props) => {
 
   return (
     <AuthenticatedLayout
-      header={
-        <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-          Projects
-        </h2>
-      }
-    >
+      header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">
+        Projects
+      </h2>} user={{
+        name: auth.user.name,
+        email: auth.user.email,
+        roles: Array.isArray(auth.user.roles)
+          ? auth.user.roles.map(role => typeof role === 'string' ? role : role.name)
+          : []
+      }}>
       <Head title="Projects" />
 
       <div className="py-12">

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Project } from '@/types';
+import { Project, Role } from '@/types';
 import AddMemberForm from '@/Components/AddMemberForm';
 
 interface Props {
@@ -30,7 +30,7 @@ interface Props {
         name: string;
         email: string;
     }>;
-    tasks?: Array<{ // Tambahkan jika ada tasks di response
+    tasks?: Array<{
         id: number;
         title: string;
         status: string;
@@ -45,11 +45,20 @@ interface Props {
         delete: boolean;
         add_task: boolean;
         add_member: boolean;
+        remove_member: boolean; // Tambahkan permission ini
+    };
+    auth: {
+        user: {
+            name: string;
+            email: string;
+            roles: Role[] | string[];
+        };
     };
 }
 
-const ProjectShow = ({ project, can, availableUsers = [], members = [] }: Props) => {
+const ProjectShow = ({ project, can, availableUsers = [], members = [], auth }: Props) => {
     console.log('Available Users Data:', availableUsers);
+
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'in_progress': return 'bg-blue-100 text-blue-800';
@@ -68,15 +77,23 @@ const ProjectShow = ({ project, can, availableUsers = [], members = [] }: Props)
         });
     };
 
-    return (
+    const handleDeleteMember = (memberId: number) => {
+        if (confirm('Are you sure you want to remove this member from the project?')) {
+            router.delete(`/projects/${project.id}/members/${memberId}`);
+        }
+    };
 
+    return (
         <AuthenticatedLayout
-            header={
-                <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-                    {project.name}
-                </h2>
-            }
-        >
+            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">
+                {project.name}
+            </h2>} user={{
+                name: auth.user.name,
+                email: auth.user.email,
+                roles: Array.isArray(auth.user.roles)
+                    ? auth.user.roles.map(role => typeof role === 'string' ? role : role.name)
+                    : []
+            }}    >
             <Head title={project.name} />
 
             <div className="py-6">
@@ -175,11 +192,22 @@ const ProjectShow = ({ project, can, availableUsers = [], members = [] }: Props)
                                                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                                                         <span className="text-blue-600 text-xl">👤</span>
                                                     </div>
-                                                    <div>
+                                                    <div className="flex-1">
                                                         <p className="text-sm font-medium text-gray-900">{member.name}</p>
                                                         <p className="text-xs text-gray-500">{member.email}</p>
                                                         <p className="text-xs text-gray-500 capitalize">{member.role}</p>
                                                     </div>
+                                                    {can.remove_member && (
+                                                        <button
+                                                            onClick={() => handleDeleteMember(member.id)}
+                                                            className="text-red-500 hover:text-red-700"
+                                                            title="Remove member"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}

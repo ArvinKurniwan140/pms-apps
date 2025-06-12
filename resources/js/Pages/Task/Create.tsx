@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { 
-  ArrowLeft, 
-  Save, 
-  Calendar, 
-  User, 
-  AlertCircle, 
+import {
+  ArrowLeft,
+  Save,
+  Calendar,
+  User,
+  AlertCircle,
   FileText,
   Briefcase,
   Target
@@ -101,7 +101,7 @@ const TaskCreate: React.FC = () => {
   return (
     <>
       <Head title="Create New Task" />
-      
+
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
@@ -137,31 +137,30 @@ const TaskCreate: React.FC = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               {/* Title */}
-            <div>
+              <div>
                 <label htmlFor="title" className="flex items-center text-sm font-medium text-gray-700 mb-2">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Task Title
+                  <FileText className="w-4 h-4 mr-2" />
+                  Task Title
                 </label>
                 <input
-                    type="text"
-                    id="title"
-                    name="title"
-                    value={data.title}
-                    onChange={(e) => setData('title', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                        errors.title ? 'border-red-300' : 'border-gray-300'
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={data.title}
+                  onChange={(e) => setData('title', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.title ? 'border-red-300' : 'border-gray-300'
                     }`}
-                    placeholder="Enter task title..."
-                    required
-                    autoComplete="off"
+                  placeholder="Enter task title..."
+                  required
+                  autoComplete="off"
                 />
                 {errors.title && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center">
-                        <AlertCircle className="w-4 h-4 mr-1" />
-                        {errors.title}
-                    </p>
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    {errors.title}
+                  </p>
                 )}
-            </div>
+              </div>
 
               {/* Description */}
               <div>
@@ -174,9 +173,8 @@ const TaskCreate: React.FC = () => {
                   rows={4}
                   value={data.description}
                   onChange={(e) => setData('description', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none ${
-                    errors.description ? 'border-red-300' : 'border-gray-300'
-                  }`}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none ${errors.description ? 'border-red-300' : 'border-gray-300'
+                    }`}
                   placeholder="Enter task description..."
                 />
                 {errors.description && (
@@ -191,34 +189,33 @@ const TaskCreate: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Project */}
                 <div>
-                <label htmlFor="project_id" className="flex items-center text-sm font-medium text-gray-700 mb-2">
-                  <Briefcase className="w-4 h-4 mr-2" />
-                  Project
-                </label>
-                <select
-                  id="project_id"
-                  value={data.project_id ?? ''}
-                  onChange={(e) =>
-                    setData('project_id', e.target.value ? parseInt(e.target.value) : null)
-                  }
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.project_id ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  required
-                >
-                  <option value="">Select a project...</option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.project_id && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" />
-                    {errors.project_id}
-                  </p>
-                )}
+                  <label htmlFor="project_id" className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                    <Briefcase className="w-4 h-4 mr-2" />
+                    Project
+                  </label>
+                  <select
+                    id="project_id"
+                    value={data.project_id ?? ''}
+                    onChange={(e) =>
+                      setData('project_id', e.target.value ? parseInt(e.target.value) : null)
+                    }
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.project_id ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    required
+                  >
+                    <option value="">Select a project...</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.project_id && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      {errors.project_id}
+                    </p>
+                  )}
                 </div>
 
                 {/* Assignee */}
@@ -233,9 +230,8 @@ const TaskCreate: React.FC = () => {
                     onChange={(e) =>
                       setData('assigned_to', e.target.value ? parseInt(e.target.value) : null)
                     }
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                      errors.assigned_to ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.assigned_to ? 'border-red-300' : 'border-gray-300'
+                      }`}
                     required
                   >
                     <option value="">Select assignee...</option>
@@ -266,9 +262,8 @@ const TaskCreate: React.FC = () => {
                     id="priority"
                     value={data.priority}
                     onChange={(e) => setData('priority', e.target.value as 'low' | 'medium' | 'high')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                      errors.priority ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.priority ? 'border-red-300' : 'border-gray-300'
+                      }`}
                   >
                     {priorityOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -294,9 +289,8 @@ const TaskCreate: React.FC = () => {
                     id="status"
                     value={data.status}
                     onChange={(e) => setData('status', e.target.value as 'pending' | 'in_progress' | 'completed' | 'cancelled')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                      errors.status ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.status ? 'border-red-300' : 'border-gray-300'
+                      }`}
                   >
                     {statusOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -324,9 +318,8 @@ const TaskCreate: React.FC = () => {
                   id="due_date"
                   value={data.due_date}
                   onChange={(e) => setData('due_date', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.due_date ? 'border-red-300' : 'border-gray-300'
-                  }`}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.due_date ? 'border-red-300' : 'border-gray-300'
+                    }`}
                 />
                 {errors.due_date && (
                   <p className="mt-1 text-sm text-red-600 flex items-center">

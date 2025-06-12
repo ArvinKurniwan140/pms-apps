@@ -14,10 +14,12 @@ return new class extends Migration
         Schema::create('attachments', function (Blueprint $table) {
             $table->id();
             $table->string('filename');
+            $table->string('original_name');
+            $table->integer('file_size');
+            $table->string('file_type');
             $table->string('path');
-            $table->string('mime_type');
-            $table->unsignedBigInteger('size');
-            $table->morphs('attachable'); // Polymorphic relation (bisa untuk task atau comment)
+            $table->unsignedBigInteger('attachable_id')->nullable();
+            $table->string('attachable_type')->nullable();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });

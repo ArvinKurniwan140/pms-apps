@@ -21,9 +21,9 @@ class DashboardController extends Controller
         $projectsQuery = $user->hasRole('admin')
             ? Project::query()
             : Project::where('created_by', $user->id)
-                ->orWhereHas('members', function ($query) use ($user) {
-                    $query->where('user_id', $user->id);
-                });
+            ->orWhereHas('members', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            });
 
         // Get all projects with progress calculation
         $allProjects = $projectsQuery->withProgress()->with(['creator', 'members', 'tasks'])->get();
@@ -118,6 +118,7 @@ class DashboardController extends Controller
             'recentTasks' => $recentTasks,
             'upcomingDeadlines' => $upcomingDeadlines,
             'chartData' => $chartData,
+
         ]);
     }
 

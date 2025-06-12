@@ -76,7 +76,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         if (!User::where('email', 'manager@pms.com')->exists()) {
             $manager = User::create([
-                'name' => 'Project Manager',
+                'name' => 'Arvin Kurniawn',
                 'email' => 'manager@pms.com',
                 'password' => bcrypt('password'),
                 'email_verified_at' => now(),
@@ -86,7 +86,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         if (!User::where('email', 'member1@pms.com')->exists()) {
             $member1 = User::create([
-                'name' => 'Team Member 1',
+                'name' => 'Rizki Hidayatulloh',
                 'email' => 'member1@pms.com',
                 'password' => bcrypt('password'),
                 'email_verified_at' => now(),
@@ -96,7 +96,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         if (!User::where('email', 'member2@pms.com')->exists()) {
             $member2 = User::create([
-                'name' => 'Team Member 2',
+                'name' => 'Lutfi Perwira',
                 'email' => 'member2@pms.com',
                 'password' => bcrypt('password'),
                 'email_verified_at' => now(),
